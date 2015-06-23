@@ -1,0 +1,13 @@
+[package]
+name = "tetris-piston"
+version = "0.1.0"
+authors = ["charles <charles.mcallister@dunnker.com>"]
+
+[dependencies]
+glutin = "*"
+piston = "*"
+piston2d-graphics = "*"
+pistoncore-glutin_window = "*"
+piston2d-opengl_graphics = "*"
+pistoncore-input = "*"
+rand = "*"
