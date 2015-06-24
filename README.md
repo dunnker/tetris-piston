@@ -20,6 +20,8 @@ The game has the following features:
 * Wall kick feature automatically shifts the current tetromino to the left or right when rotating next to the side walls
 
 # Notes about the code
+The code contains just two modules, main.rs and tetris.rs  tetris.rs is meant to be a general library for creating a tetris game as it is not dependent on rendering, timers, keyboard events etc. main.rs contains rendering logic and keyboard events -- all provided by Piston.
+
 When I first dug into the code, I was happy to see that Rust supports the abilitiy to create a const array of struct like so:
 
 ```rust
