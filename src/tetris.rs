@@ -191,7 +191,7 @@ impl Tetris {
     /// When the player presses arrow keys to move the shape left and right, invoke set_col()
     /// to move the shape.
     pub fn set_col(&mut self, col: usize) -> bool {
-        let result: bool = self.valid_location(self.shape, col, self.row, false);
+        let result: bool = self.valid_location(self.shape, col, self.row, true);
         if result {
             let use_row = self.row;
             // move the current shape, and clear its old position before moving
@@ -210,7 +210,7 @@ impl Tetris {
     /// When the player presses the down arrow to drop the shape, invoke set_row() to set the
     /// new row value.
     pub fn set_row(&mut self, row: usize) -> bool {
-        let result: bool = self.valid_location(self.shape, self.col, row, false);
+        let result: bool = self.valid_location(self.shape, self.col, row, true);
         if result {
             let use_col = self.col;
             // move the current shape, and clear its old position before moving
@@ -244,8 +244,8 @@ impl Tetris {
         if self.shape_index != SQUARE_SHAPE_INDEX {
             self.rotate_shape(clockwise, &mut shape);
         }
-        // if this new shape is in a valid position...
-        let result: bool = self.valid_location(shape, self.col, self.row, true);
+        // if this new shape is in a valid position (not checking sides because we can wall kick)...
+        let result: bool = self.valid_location(shape, self.col, self.row, false);
         if result {
             // ...then remove the current shape from the board
             self.clear_shape(); // normally move_shape will take care of this, however, the shape itself is changing (not just position)
@@ -329,7 +329,7 @@ impl Tetris {
         self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT);
         self.next_shape = SHAPES[self.next_shape_index];
         self.shape = SHAPES[self.shape_index];
-        let result: bool = self.valid_location(self.shape, self.col, self.row, false);
+        let result: bool = self.valid_location(self.shape, self.col, self.row, true);
         if result {
             let use_col = self.col;
             let use_row = self.row;
@@ -339,47 +339,30 @@ impl Tetris {
     }
 
     /// Compute the actual point on the grid based on a shape point and row, col values
+    /// The resulting point may be out of bounds
     fn get_grid_point(&self, col: usize, row: usize, point: Point) -> Point {
         Point { 
-            x: col as i16 + point.x as i16, 
-            y: row as i16 + point.y as i16
+            x: col as i16 + point.x, 
+            y: row as i16 + point.y
         }
     }
 
     /// Given a shape and col, row values, determine if the shape is in a valid position,
     /// keeping in mind that some or all of the points can be out of bounds at the top of the grid.
-    fn valid_location(&self, shape: [Point; POINT_COUNT], col: usize, row: usize, rotating: bool) -> bool {
+    fn valid_location(&self, shape: [Point; POINT_COUNT], col: usize, row: usize, check_sides: bool) -> bool {
         let mut result: bool = true;
         // test to see if we can successfully place the shape in the new location...
         for point in shape.iter() {
             let grid_point: Point = self.get_grid_point(col, row, *point);
-            // test points that have made it inside the grid,
-            // since the shape starts out only partway inside the grid...
-            if grid_point.y >= 0 {
-                // test points against walls and blocks that are already placed...
-                if grid_point.x < 0 ||
-                    grid_point.x >= COL_COUNT as i16 ||
-                    grid_point.y >= ROW_COUNT as i16 {
-                    if !rotating {
-                        result = false;
-                        break;
-                    }
-                       // ok to downcast to unsigned because we already
-                       // checked within bounds
-                } else if self.grid[grid_point.x as usize][grid_point.y as usize].cell_type == GridCellType::Fixed {
-                    result = false;
-                    break;
-                }
-            } else {
-                // if the point is still outside the grid at the top, test to see
-                // if the point is inside the grid to the left and right...
-                if grid_point.x < 0 ||
-                    grid_point.x >= COL_COUNT as i16 {
-                    if !rotating {
-                        result = false;
-                        break;
-                    }
-                }
+            // test points against walls and blocks that are already placed...
+            if (check_sides && (grid_point.x < 0 || grid_point.x >= COL_COUNT as i16)) ||
+                //grid_point.y < 0 || (it's ok for the y position to be outside grid at the top)
+                grid_point.y >= ROW_COUNT as i16 ||
+                // ok to downcast to unsigned after checking in bounds...
+                (self.point_in_bounds(col, row, *point) && 
+                    self.grid[grid_point.x as usize][grid_point.y as usize].cell_type == GridCellType::Fixed) {
+                result = false;
+                break;
             }
         }
         result
@@ -395,7 +378,7 @@ impl Tetris {
         // determine the row where ghost shape is placed
         self.ghost_row = row;
         loop {
-            if self.valid_location(self.shape, col, self.ghost_row + 1, false) {
+            if self.valid_location(self.shape, col, self.ghost_row + 1, true) {
                 self.ghost_row += 1;
             } else {
                 break;
@@ -464,7 +447,7 @@ impl Tetris {
     /// Attempt to place the current shape one more row below its current row position.
     /// Return true if it is successful.
     fn new_row(&mut self) -> bool {
-        let result: bool = self.valid_location(self.shape, self.col, self.row + 1, false);
+        let result: bool = self.valid_location(self.shape, self.col, self.row + 1, true);
         if result {
             let use_col = self.col;
             let use_row = self.row;
@@ -573,16 +556,25 @@ impl Tetris {
                 -1
             };
             for point in self.shape.iter() {
-                let grid_point: Point = self.get_grid_point(self.col, self.row, *point);
-                // if not in bounds, then we may need to kick left/right
-                // keep in mind that not in bounds could mean not in bounds at the top of the grid
-                // so this is why we're not using the point_in_bounds() function
-                if grid_point.x < 0 || grid_point.x >= COL_COUNT as i16 {
-                    let new_col: i32 = self.col as i32 + increment;
-                    // check overflow before casting to usize
-                    if new_col > 0 && self.valid_location(self.shape, new_col as usize, self.row, false) {
-                        self.col = new_col as usize;
+                let mut kick_col: usize = self.col;
+                // loop until we've shifted kick_col appropriately for this point's x value
+                loop {
+                    let grid_x: i16 = kick_col as i16 + point.x;
+                    // if not in bounds, then we may need to kick left/right
+                    if grid_x < 0 || grid_x >= COL_COUNT as i16 {
+                        // kick left/right; note we're assuming we won't overflow by going negative
+                        // note an overflow will occur if we write it like this:
+                        // kick_col += increment;
+                        kick_col = kick_col.wrapping_add(increment);
+                    } else {
+                        // point is in bounds so no need to kick any more for this point
+                        break;
                     }
+                }
+                // we may have kicked to a new colum, so ensure this is a valid location
+                // e.g. we may have kicked into a place where there are Fixed cells
+                if self.valid_location(self.shape, kick_col, self.row, true) {
+                    self.col = kick_col;
                 }
             }
         }

@@ -158,7 +158,7 @@ impl App {
     fn handle_input(&mut self, i: Input) {
         match i {
             Input::Press(Keyboard(Key::Left)) => { 
-                let col = self.tetris.get_col();
+                let col: usize = self.tetris.get_col();
                 // !! must check, otherwise could get overflow
                 if col > 0 {
                     self.tetris.set_col(col - 1);
@@ -166,7 +166,7 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::Right)) => { 
-                let col = self.tetris.get_col();
+                let col: usize = self.tetris.get_col();
                 self.tetris.set_col(col + 1);
             },
 
@@ -175,7 +175,7 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::Down)) => { 
-                let mut row = self.tetris.get_row() + 1;
+                let mut row: usize = self.tetris.get_row() + 1;
                 while self.tetris.set_row(row) {
                     row += 1;
                 }
