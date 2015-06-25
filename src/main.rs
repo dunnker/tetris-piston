@@ -119,8 +119,8 @@ impl App {
             rect_border.draw([
                 LEFT_MARGIN,
                 TOP_MARGIN,
-                CELL_SIZE * COL_COUNT as f64,
-                CELL_SIZE * ROW_COUNT as f64,
+                (CELL_SIZE * COL_COUNT as f64) + 1f64,
+                (CELL_SIZE * ROW_COUNT as f64) + 1f64,
             ], &c.draw_state, c.transform, gl);
 
             // render each cell in the game board
@@ -139,7 +139,10 @@ impl App {
                                 BLACK
                             }
                         };
-                        graphics::rectangle(color, square, c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y), gl);                    
+                        let transform = c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y);
+                        graphics::rectangle(color, square, transform, gl);                    
+                        let tetromino_border = graphics::Rectangle::new_border(DARK_GRAY, 1.0);
+                        tetromino_border.draw([0f64, 0f64, CELL_SIZE, CELL_SIZE], &c.draw_state, transform, gl);
                     }
                 }
             }
