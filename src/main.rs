@@ -102,6 +102,14 @@ impl App {
 
                 text.draw(&"Press 'N' for a new game", use_cache, &c.draw_state, 
                     transform.transform, gl);
+                transform = transform.trans(0f64, LINE_HEIGHT);
+
+                text.draw(&"Use arrow keys to move and rotate", use_cache, &c.draw_state, 
+                    transform.transform, gl);
+                transform = transform.trans(0f64, LINE_HEIGHT);
+                
+                text.draw(&"Press spacebar to drop", use_cache, &c.draw_state, 
+                    transform.transform, gl);
                 // uncomment if drawing additional text in the status area
                 //transform = transform.trans(0f64, LINE_HEIGHT);
             }
@@ -204,7 +212,7 @@ fn start_app() {
             exit_on_esc(true)
     );
     
-    let font_path = Path::new("/home/charles/workspace/tetris-piston/FiraMono-Bold.ttf");
+    let font_path = Path::new("FiraMono-Bold.ttf");
 
     let mut app = App {
         gl: GlGraphics::new(opengl),
