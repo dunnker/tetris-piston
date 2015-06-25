@@ -57,7 +57,7 @@ Also, using Rust's array iterator came in really handy, as the code has many exa
         }
 ```
 
-However, on the negative side, I had to pay special attention to integer overflow exceptions which would halt the game abruptly. In other languages I don't remember this coming up. The root of the issue in Rust, is Rust's "usize" datatype, which is an unsigned integer used for indexing into an array. The col and row fields used to track the position of the current tetromino are of type usize. This is because they are often used to index into the grid array which represents the game board. In a few cases I may do a calculation to decrement the row/col value, and if I'm not careful could end up with an overflow if the value goes negative, for example:
+However, on the negative side, I had to pay special attention to integer overflow exceptions which would halt the game abruptly. In other languages I don't remember this coming up. The issue mostly stemmed from Rust's "usize" datatype, which is an unsigned integer used for indexing into an array. Originally, the col and row fields used to track the position of the current tetromino were of type usize. This was because they were used to index into the grid array which represents the game board. In a few cases I had to do a calculation to decrement the row/col value, and if I wasn't careful I would end up with an overflow if the value went negative, for example:
 
 ```rust
         let col = self.tetris.get_col();
@@ -67,26 +67,29 @@ However, on the negative side, I had to pay special attention to integer overflo
         }
 ```
 
-Here is another example that was a bit tedious, also because Rust's while loop does not support do-while:
+In the example above, the value passed to set_col() may be negative when set_col takes a usize data type. This seems fair enough, however, later I found that I had to pay close attention any time I was decrementing an unsigned data type. For example, consider this seemingly benign code:
 
 ```rust
-    fn complete_rows(&mut self) -> u8 {
-        let mut result = 0;
-        let mut row: usize = ROW_COUNT - 1;
-        loop {
-            let found_void = ...
-            //..
-            if !found_void {
-              //..
-            } else if row > 0 {
-                // row decrements but we must be careful not to overflow as row is unsigned
-                row -= 1;
-            } else {
-                break;
-            }
-        }
-        result
-    }
+fn main() {
+    let mut x: u8 = 1;
+    let y = -1;
+    
+    x += y;
+    
+    println!("{}", x);
+}
 ```
 
-In the future I could try keeping data types as signed integers, however, I'm afraid that I will be frequently casting to usize in many places where I'm indexing into arrays. But this may be a worthy compromise.
+Incrementing unsigned x by the signed y value resulting in a value of 0 doesn't immediately raise alarm bells. But the code will produce a panic and halt. I believe the compiled code is actually executed as:
+
+```rust
+        x = x + y as u8;
+```
+
+The casting of y as an unsigned type when it has a negative value results in the overflow. I assumed the code would execute more like this:
+
+```rust
+        x = (x as i8 + y) as u8;
+```
+
+Regardless, I ended up removing usize as the datatype for most of my fields and favored i32 which tended to skirt the overflow issues I was getting. The only caveat being that any time I'm using a field to index into any of my arrays, I have to cast to usize -- but that tends to be a safe operation because by that time I've already done the bounds checking necessary that would avoid an overflow.
