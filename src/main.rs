@@ -67,15 +67,10 @@ impl App {
         let temp_tetris = &mut self.tetris;
 
         self.gl.draw(args.viewport(), |c, gl| {
+            // clear the viewport
             graphics::clear(BLACK, gl);
-            let rect_border = graphics::Rectangle::new_border(WHITE, 1.0);
-            rect_border.draw([
-                LEFT_MARGIN,
-                TOP_MARGIN,
-                CELL_SIZE * COL_COUNT as f64,
-                CELL_SIZE * ROW_COUNT as f64,
-            ], &c.draw_state, c.transform, gl);
 
+            // render the current score and level
             let mut text = graphics::Text::new(22);
             text.color = ORANGE;
             text.draw(&format!("Level: {}", temp_tetris.get_level()), temp_cache, &c.draw_state, 
@@ -83,6 +78,7 @@ impl App {
             text.draw(&format!("Score: {}", temp_tetris.get_score()), temp_cache, &c.draw_state, 
                 c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + LINE_HEIGHT).transform, gl);
 
+            // render the next shape as a preview of what's coming next
             for point in temp_tetris.get_next_shape().iter() {
                 let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE + STATUS_LEFT_MARGIN, 
                     (2 as i16 + point.y) as f64 * CELL_SIZE + STATUS_TOP_MARGIN + (LINE_HEIGHT * 2f64));
@@ -91,6 +87,7 @@ impl App {
                 graphics::rectangle(color, square, c.transform, gl);                    
             }
 
+            // render GAME OVER text if necessary
             if temp_tetris.get_game_over() {
                 text.draw(&"GAME OVER", temp_cache, &c.draw_state, 
                     c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + (LINE_HEIGHT * 6f64)).transform, gl);
@@ -98,6 +95,16 @@ impl App {
                     c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + (LINE_HEIGHT * 7f64)).transform, gl);
             }
 
+            // draw a white border around the game board
+            let rect_border = graphics::Rectangle::new_border(WHITE, 1.0);
+            rect_border.draw([
+                LEFT_MARGIN,
+                TOP_MARGIN,
+                CELL_SIZE * COL_COUNT as f64,
+                CELL_SIZE * ROW_COUNT as f64,
+            ], &c.draw_state, c.transform, gl);
+
+            // render each cell in the game board
             for col in 0..COL_COUNT as i32 {
                 for row in 0..ROW_COUNT as i32 {
                     let cell = temp_tetris.get_grid_cell(col, row);
@@ -201,15 +208,12 @@ fn start_app() {
     let opengl = OpenGL::_3_2;
 
     let window = Glutin_Window::new(
-
-        // some versions of glutin require a parameter here?
-        //opengl,
-
+        opengl,
         WindowSettings::new("Piston Tetris", [1024, 768]).
             exit_on_esc(true)
     );
     
-    let font_path = Path::new("/usr/share/fonts/truetype/freefont/FreeSans.ttf");
+    let font_path = Path::new("FiraMono-Bold.ttf");
 
     let mut app = App {
         gl: GlGraphics::new(opengl),
