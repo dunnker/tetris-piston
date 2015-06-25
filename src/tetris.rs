@@ -282,8 +282,9 @@ impl Tetris {
     /// Advances the state of the game board. Invoke tick() at a time interval related to the current level.
     pub fn tick(&mut self) {
         assert!(!self.game_over);
+        let new_row = self.row + 1;
         // if we can't move the shape to a new row...
-        if !self.new_row() {
+        if !self.set_row(new_row) {
             // ...then fix the shape into place
             self.shape_to_grid();
             // ...then determine if we completed any rows
@@ -444,19 +445,6 @@ impl Tetris {
                 }
             }
         }
-    }
-
-    /// Attempt to place the current shape one more row below its current row position.
-    /// Return true if it is successful.
-    fn new_row(&mut self) -> bool {
-        let result: bool = self.valid_location(self.shape, self.col, self.row + 1, true);
-        if result {
-            let use_col = self.col;
-            let use_row = self.row;
-            self.move_shape(use_col, use_row + 1, true);
-            self.row += 1;
-        }
-        result
     }
 
     /// Invoke this method to anchor the current shape onto the board when it can no longer
