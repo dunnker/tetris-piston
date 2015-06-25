@@ -191,15 +191,19 @@ impl Tetris {
     /// When the player presses arrow keys to move the shape left and right, invoke set_col()
     /// to move the shape.
     pub fn set_col(&mut self, col: i32) -> bool {
-        let result: bool = col >= 0 && col < COL_COUNT as i32 && 
-            self.valid_location(self.shape, col, self.row, true);
-        if result {
-            let use_row = self.row;
-            // move the current shape, and clear its old position before moving
-            self.move_shape(col, use_row, true);
-            self.col = col;
+        if !self.game_over {
+            let result: bool = col >= 0 && col < COL_COUNT as i32 && 
+                self.valid_location(self.shape, col, self.row, true);
+            if result {
+                let use_row = self.row;
+                // move the current shape, and clear its old position before moving
+                self.move_shape(col, use_row, true);
+                self.col = col;
+            }
+            result
+        } else {
+            false
         }
-        result
     }
 
     /// Returns the row position of the current shape. Note each Point.y value of the shape
@@ -211,15 +215,19 @@ impl Tetris {
     /// When the player presses the down arrow to drop the shape, invoke set_row() to set the
     /// new row value.
     pub fn set_row(&mut self, row: i32) -> bool {
-        let result: bool = row >= 0 && row < ROW_COUNT as i32 && 
-            self.valid_location(self.shape, self.col, row, true);
-        if result {
-            let use_col = self.col;
-            // move the current shape, and clear its old position before moving
-            self.move_shape(use_col, row, true);
-            self.row = row;
+        if !self.game_over {
+            let result: bool = row >= 0 && row < ROW_COUNT as i32 && 
+                self.valid_location(self.shape, self.col, row, true);
+            if result {
+                let use_col = self.col;
+                // move the current shape, and clear its old position before moving
+                self.move_shape(use_col, row, true);
+                self.row = row;
+            }
+            result
+        } else {
+            false
         }
-        result
     }
 
     pub fn get_score(&self) -> u32 {
@@ -240,72 +248,78 @@ impl Tetris {
 
     /// Use rotate() when the player presses a key to rotate the current shape.
     pub fn rotate(&mut self, clockwise: bool) -> bool {
-        // rotate a copy of the current shape
-        let mut shape = self.shape;
-        // there is no need to rotate the square shape as it is symmetrical
-        if self.shape_index != SQUARE_SHAPE_INDEX {
-            self.rotate_shape(clockwise, &mut shape);
+        if !self.game_over {
+            // rotate a copy of the current shape
+            let mut shape = self.shape;
+            // there is no need to rotate the square shape as it is symmetrical
+            if self.shape_index != SQUARE_SHAPE_INDEX {
+                self.rotate_shape(clockwise, &mut shape);
+            }
+            // if this new shape is in a valid position (not checking sides because we can wall kick)...
+            let result: bool = self.valid_location(shape, self.col, self.row, false);
+            if result {
+                // ...then remove the current shape from the board
+                self.clear_shape(); // normally move_shape will take care of this, however, the shape itself is changing (not just position)
+                // ...then assign the copy to the current shape
+                self.shape = shape;
+                // perform wall kick if necessary
+                self.wall_kick();
+                let use_col = self.col;
+                let use_row = self.row;
+                // now place the current shape back onto the board
+                self.move_shape(use_col, use_row, false);
+            }
+            result
+        } else {
+            false
         }
-        // if this new shape is in a valid position (not checking sides because we can wall kick)...
-        let result: bool = self.valid_location(shape, self.col, self.row, false);
-        if result {
-            // ...then remove the current shape from the board
-            self.clear_shape(); // normally move_shape will take care of this, however, the shape itself is changing (not just position)
-            // ...then assign the copy to the current shape
-            self.shape = shape;
-            // perform wall kick if necessary
-            self.wall_kick();
-            let use_col = self.col;
-            let use_row = self.row;
-            // now place the current shape back onto the board
-            self.move_shape(use_col, use_row, false);
-        }
-        result
     }
 
     /// Starts a new game by clearing the game board, and resetting the level, score etc.
     pub fn start_game(&mut self) {
-        assert!(self.game_over);
-        self.game_over = false;
-        self.level = 0;
-        self.score = 0;
-        self.rows_completed = 0;
-        self.rows_completed_level = 0;
-        self.clear_grid();
-        // next shape is a random shape
-        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
-        self.next_shape = SHAPES[self.next_shape_index as usize];
-        // add a new shape on the board
-        self.new_shape();
+        if self.game_over {
+            self.game_over = false;
+            self.level = 0;
+            self.score = 0;
+            self.rows_completed = 0;
+            self.rows_completed_level = 0;
+            self.clear_grid();
+            // next shape is a random shape
+            self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
+            self.next_shape = SHAPES[self.next_shape_index as usize];
+            // add a new shape on the board
+            self.new_shape();
+        }
     }
 
     /// Advances the state of the game board. Invoke tick() at a time interval related to the current level.
     pub fn tick(&mut self) {
-        assert!(!self.game_over);
-        let new_row = self.row + 1;
-        // if we can't move the shape to a new row...
-        if !self.set_row(new_row) {
-            // ...then fix the shape into place
-            self.shape_to_grid();
-            // ...then determine if we completed any rows
-            let rows = self.complete_rows();
-            // calculate new score
-            let score_factor: u16 = match rows {
-                1 => 40,
-                2 => 100,
-                3 => 300,
-                4 => 1200,
-                _ => 0,
-            };
-            self.score += score_factor as u32 * (self.level + 1);
-            // determine if we should start a new level
-            if self.rows_completed_level > ROWS_PER_LEVEL {
-                self.rows_completed_level = 0;
-                self.level += 1;
-            }
-            // ...now place a new shape onto the board
-            if !self.new_shape() {
-                self.end_game();
+        if !self.game_over {
+            let new_row = self.row + 1;
+            // if we can't move the shape to a new row...
+            if !self.set_row(new_row) {
+                // ...then fix the shape into place
+                self.shape_to_grid();
+                // ...then determine if we completed any rows
+                let rows = self.complete_rows();
+                // calculate new score
+                let score_factor: u16 = match rows {
+                    1 => 40,
+                    2 => 100,
+                    3 => 300,
+                    4 => 1200,
+                    _ => 0,
+                };
+                self.score += score_factor as u32 * (self.level + 1);
+                // determine if we should start a new level
+                if self.rows_completed_level > ROWS_PER_LEVEL {
+                    self.rows_completed_level = 0;
+                    self.level += 1;
+                }
+                // ...now place a new shape onto the board
+                if !self.new_shape() {
+                    self.end_game();
+                }
             }
         }
     }
@@ -338,7 +352,6 @@ impl Tetris {
     /// Ends the game. However, the current state of the game is preserved (e.g. not clearing the game board)
     /// because rendering code might still display the board
     pub fn end_game(&mut self) {
-        assert!(!self.game_over);
         self.game_over = true;
     }
 

@@ -189,9 +189,7 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::N)) => { 
-                if self.tetris.get_game_over() {
-                    self.tetris.start_game();
-                }
+                self.tetris.start_game();
             },
 
             _=> {}
