@@ -3,6 +3,16 @@ A tetris game written in Rust using the Piston library
 
 I know the world doesn't need another Tetris clone, however this is a good learning project for me because I've implemented this game in several other languages (Delphi, C#, C++), so it's mostly a matter of translation. But it's also an opportunity to compare Rust to these other languages.
 
+The game has the following features:
+
+* Level difficulty similar to other tetris games
+* Scoring based on number of rows completed with bonuses for completing groups of rows at once
+* Can preview the next tetromino to appear on the board
+* Ghost tetromino lets you know where the current tetromino will be dropped
+* Wall kick feature automatically shifts the current tetromino to the left or right when rotating next to the side walls
+
+### Building the project
+
 Assuming you already have Rust installed, to build the game unzip the source code and from a command prompt enter:
 
 cargo build
@@ -11,13 +21,9 @@ Then to run the game enter:
 
 cargo run
 
-The game has the following features:
+### Note regarding Windows
 
-* Level difficulty similar to other tetris games
-* Scoring based on number of rows completed with bonuses for completing groups of rows at once
-* Can preview the next tetromino to appear on the board
-* Ghost tetromino lets you know where the current tetromino will be dropped
-* Wall kick feature automatically shifts the current tetromino to the left or right when rotating next to the side walls
+To build under Windows, be sure to follow the instructions regarding Windows in the [Piston Tutorials/getting-started project](https://github.com/bvssvni/Piston-Tutorials/tree/master/getting-started)
 
 # Notes about the code
 The code contains just two modules, main.rs and tetris.rs  tetris.rs is meant to be a general library for creating a tetris game as it is not dependent on rendering, timers, keyboard events etc. main.rs contains rendering logic and keyboard events -- all provided by Piston.
