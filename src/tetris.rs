@@ -368,7 +368,7 @@ impl Tetris {
 
     /// Compute the actual point on the grid based on a shape point and row, col values
     /// The resulting point may be out of bounds
-    fn get_grid_point(&self, col: i32, row: i32, point: Point) -> Point {
+    fn transform_point(&self, col: i32, row: i32, point: Point) -> Point {
         Point { 
             x: col as i16 + point.x, 
             y: row as i16 + point.y
@@ -381,7 +381,7 @@ impl Tetris {
         let mut result: bool = true;
         // test to see if we can successfully place the shape in the new location...
         for point in shape.iter() {
-            let grid_point: Point = self.get_grid_point(col, row, *point);
+            let grid_point: Point = self.transform_point(col, row, *point);
             // test points against walls and blocks that are already placed...
             if (check_sides && (grid_point.x < 0 || grid_point.x >= COL_COUNT as i16)) ||
                 //grid_point.y < 0 || (it's ok for the y position to be outside grid at the top)
@@ -396,6 +396,19 @@ impl Tetris {
         result
     }
 
+    /// Helper method to iterate over all points of a shape and invoke the supplied
+    /// closure, returning each point's corresponding grid cell
+    fn for_each_cell<F>(&mut self, shape: [Point; POINT_COUNT as usize], col: i32, row: i32, c: F) 
+        where F : Fn(&mut GridCell) {
+        for point in shape.iter() {
+            if self.point_in_bounds(col, row, *point) {
+                let grid_point = self.transform_point(col, row, *point);
+                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
+                c(grid_cell);
+            }
+        }
+    }
+
     /// Place a shape onto the game board at the specified col, row.
     /// If clear_before is true, then base on the shape's current position, 
     /// set the grid cells to Void
@@ -403,6 +416,14 @@ impl Tetris {
         if clear_before {
             self.clear_shape();
         }
+        let use_shape = self.shape;
+        let use_shape_index = self.shape_index;
+        self.for_each_cell(use_shape, col, row, |grid_cell| {
+            assert!(grid_cell.cell_type == GridCellType::Void ||
+                grid_cell.cell_type == GridCellType::Ghost);
+            grid_cell.cell_type = GridCellType::Shape;
+            grid_cell.shape_index = use_shape_index as i32;
+        });
         // determine the row where ghost shape is placed
         self.ghost_row = row;
         loop {
@@ -412,35 +433,19 @@ impl Tetris {
                 break;
             }
         }
-        // place the shape in the specified location...
-        for point in self.shape.iter() {
-            if self.point_in_bounds(col, row, *point) {
-                let grid_point: Point = self.get_grid_point(col, row, *point);
-
-                // it's safe to cast from signed to unsigned since point_in_bounds is true
-                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
-                assert!(grid_cell.cell_type == GridCellType::Void ||
-                    grid_cell.cell_type == GridCellType::Ghost);
-
-                grid_cell.cell_type = GridCellType::Shape;
-                grid_cell.shape_index = self.shape_index as i32;
+        let use_ghost_row = self.ghost_row;
+        self.for_each_cell(use_shape, col, use_ghost_row, |grid_cell| {
+            if grid_cell.cell_type == GridCellType::Void {
+                grid_cell.cell_type = GridCellType::Ghost;
             }
-            // place ghost shape
-            if self.point_in_bounds(col, self.ghost_row, *point) {
-                let grid_point: Point = self.get_grid_point(col, self.ghost_row, *point);
-                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
-                if grid_cell.cell_type == GridCellType::Void {
-                    grid_cell.cell_type = GridCellType::Ghost;
-                }
-            }
-        }
+        });
     }
 
     /// Determine if a given shape point is within the bounds of the grid relative to col, row
     /// See also SHAPES const which defines each point
     /// See also self.valid_location()
     fn point_in_bounds(&self, col: i32, row: i32, point: Point) -> bool {
-        let grid_point: Point = self.get_grid_point(col, row, point);
+        let grid_point: Point = self.transform_point(col, row, point);
         grid_point.x >= 0 &&
             grid_point.x < COL_COUNT as i16 &&
             grid_point.y >= 0 &&
@@ -451,42 +456,33 @@ impl Tetris {
     /// the GridCell.cell_type to Void. This effectively makes the shape disappear.
     fn clear_shape(&mut self) {
         // clear the shape in its current location...
-        for point in self.shape.iter() {
-            if self.point_in_bounds(self.col, self.row, *point) {
-                let grid_point: Point = self.get_grid_point(self.col, self.row, *point);
-                // it's safe to cast from signed to unsigned since point_in_bounds is true
-                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
-                assert!(grid_cell.cell_type == GridCellType::Shape);
-
+        let use_shape = self.shape;
+        let use_col = self.col;
+        let use_row = self.row;
+        self.for_each_cell(use_shape, use_col, use_row, |grid_cell| {
+            assert!(grid_cell.cell_type == GridCellType::Shape);
+            grid_cell.cell_type = GridCellType::Void;
+            grid_cell.shape_index = -1;
+        });
+        let use_ghost_row = self.ghost_row;
+        self.for_each_cell(use_shape, use_col, use_ghost_row, |grid_cell| {
+            if grid_cell.cell_type == GridCellType::Ghost {
                 grid_cell.cell_type = GridCellType::Void;
-                grid_cell.shape_index = -1;
             }
-            // clear ghost
-            if self.point_in_bounds(self.col, self.ghost_row, *point) {
-                let grid_point: Point = self.get_grid_point(self.col, self.ghost_row, *point);
-                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
-                if grid_cell.cell_type == GridCellType::Ghost {
-                    grid_cell.cell_type = GridCellType::Void;
-                }
-            }
-        }
+        });
     }
 
     /// Invoke this method to anchor the current shape onto the board when it can no longer
     /// advance to a new row. This sets the grid cell's type, for each point of the current shape,
     /// (relative to the current col, row), to Fixed
     fn shape_to_grid(&mut self) {
-        for point in self.shape.iter() {
-            if self.point_in_bounds(self.col, self.row, *point) {
-                let grid_point: Point = self.get_grid_point(self.col, self.row, *point);
-                // it's safe to cast from signed to unsigned since point_in_bounds is true
-                let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
-
-                assert!(grid_cell.cell_type == GridCellType::Shape);
-
-                grid_cell.cell_type = GridCellType::Fixed;
-            }
-        }
+        let use_shape = self.shape;
+        let use_col = self.col;
+        let use_row = self.row;
+        self.for_each_cell(use_shape, use_col, use_row, |grid_cell| {
+            assert!(grid_cell.cell_type == GridCellType::Shape);
+            grid_cell.cell_type = GridCellType::Fixed;
+        });
     }
 
     /// Determine if any rows have any gaps, and if they do not, then remove those
@@ -498,14 +494,7 @@ impl Tetris {
         while row >= 0 {
             let row_index: usize = row as usize;
             // look for any void spots on this row
-            let mut found_void = false;
-            for col in 0..COL_COUNT as usize {
-                if self.grid[col][row_index].cell_type == GridCellType::Void {
-                    found_void = true;
-                    break;
-                }
-            }
-
+            let found_void = (0..COL_COUNT as usize).any(|c| self.grid[c][row_index].cell_type == GridCellType::Void);
             if !found_void {
                 result += 1;
                 self.rows_completed_level += 1;
