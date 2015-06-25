@@ -11,14 +11,14 @@ pub struct Point {
 }
 
 /// The width of the game board
-pub const COL_COUNT: usize = 10;
+pub const COL_COUNT: u8 = 10;
 /// The height of the game board
-pub const ROW_COUNT: usize = 22;
+pub const ROW_COUNT: u8 = 22;
 
 /// The number of tetromino's
-pub const SHAPE_COUNT: usize = 7;
+pub const SHAPE_COUNT: u8 = 7;
 /// The number of points in each tetromino
-pub const POINT_COUNT: usize = 4;
+pub const POINT_COUNT: u8 = 4;
 
 /// The number of rows the player must complete before going to a new level
 pub const ROWS_PER_LEVEL: u8 = 10;
@@ -27,7 +27,7 @@ pub const ROWS_PER_LEVEL: u8 = 10;
 /// There are 4 points per shape, and 7 shapes in all.
 /// So SHAPES is a two-dimensional array to get access to 
 /// each point of each shape.
-pub const SHAPES: [[Point; POINT_COUNT]; SHAPE_COUNT] = [
+pub const SHAPES: [[Point; POINT_COUNT as usize]; SHAPE_COUNT as usize] = [
 
         /*
                       0,-1
@@ -74,7 +74,7 @@ pub const SHAPES: [[Point; POINT_COUNT]; SHAPE_COUNT] = [
 
 /// The square shape is special because it doesn't need to be rotated when the player
 /// presses the rotate key
-pub const SQUARE_SHAPE_INDEX: usize = 1;
+pub const SQUARE_SHAPE_INDEX: i32 = 1;
 
 /// The tetris game board consists of a two-dimensional array of GridCell's. Each GridCell struct
 /// contains an enum, GridCellType to indicate the type of cell
@@ -119,24 +119,24 @@ impl Default for GridCell {
 /// painted at that cell, or paint nothing if the cell is void.
 pub struct Tetris {
     /// The game board as a two dimensional array of GridCell's
-    grid: [[GridCell; ROW_COUNT]; COL_COUNT],
+    grid: [[GridCell; ROW_COUNT as usize]; COL_COUNT as usize],
     /// Game over flag
     game_over: bool,
     /// The current shape equal to the corresponding shape in the SHAPES const
     /// unless the shape has been rotated
-    shape: [Point; POINT_COUNT],
+    shape: [Point; POINT_COUNT as usize],
     /// The next randomly determined shape, see also next_shape_index
-    next_shape: [Point; POINT_COUNT],
+    next_shape: [Point; POINT_COUNT as usize],
     /// The column position of the current moving shape
-    col: usize,
+    col: i32,
     /// The row position of the current moving shape
-    row: usize,
+    row: i32,
     /// The row position where the last ghost shape was determined
-    ghost_row: usize,
+    ghost_row: i32,
     /// The current shape index into the SHAPES const
-    shape_index: usize,
+    shape_index: i32,
     /// The next random shape index into the SHAPES const
-    next_shape_index: usize,
+    next_shape_index: i32,
     /// The current level number
     level: u32,
     /// The number of rows completed for the current level
@@ -153,7 +153,7 @@ impl Tetris {
     /// Constructs a new Tetris struct
     pub fn new() -> Tetris {
         Tetris { 
-            grid: [[GridCell::default(); ROW_COUNT]; COL_COUNT],
+            grid: [[GridCell::default(); ROW_COUNT as usize]; COL_COUNT as usize],
             game_over: true,
             shape_index: 0,
             next_shape_index: 0,
@@ -176,22 +176,23 @@ impl Tetris {
     }
 
     /// Gets the GridCell at the specified col and row. See also GridCell.
-    pub fn get_grid_cell(&self, col: usize, row: usize) -> GridCell {
-        assert!(col <= COL_COUNT - 1);
-        assert!(row <= ROW_COUNT - 1);
-        self.grid[col][row]
+    pub fn get_grid_cell(&self, col: i32, row: i32) -> GridCell {
+        assert!(col >= 0 && col <= COL_COUNT as i32 - 1);
+        assert!(row >= 0 && row <= ROW_COUNT as i32 - 1);
+        self.grid[col as usize][row as usize]
     }
 
     /// Returns the column position of the current shape. Note each Point.x value of the shape
     /// can be added to this column value to determine the actual position of the Point.
-    pub fn get_col(&self) -> usize {
+    pub fn get_col(&self) -> i32 {
         self.col
     }
 
     /// When the player presses arrow keys to move the shape left and right, invoke set_col()
     /// to move the shape.
-    pub fn set_col(&mut self, col: usize) -> bool {
-        let result: bool = self.valid_location(self.shape, col, self.row, true);
+    pub fn set_col(&mut self, col: i32) -> bool {
+        let result: bool = col >= 0 && col < COL_COUNT as i32 && 
+            self.valid_location(self.shape, col, self.row, true);
         if result {
             let use_row = self.row;
             // move the current shape, and clear its old position before moving
@@ -203,14 +204,15 @@ impl Tetris {
 
     /// Returns the row position of the current shape. Note each Point.y value of the shape
     /// can be added to this row value to determine the actual position of the Point.
-    pub fn get_row(&self) -> usize {
+    pub fn get_row(&self) -> i32 {
         self.row
     }
 
     /// When the player presses the down arrow to drop the shape, invoke set_row() to set the
     /// new row value.
-    pub fn set_row(&mut self, row: usize) -> bool {
-        let result: bool = self.valid_location(self.shape, self.col, row, true);
+    pub fn set_row(&mut self, row: i32) -> bool {
+        let result: bool = row >= 0 && row < ROW_COUNT as i32 && 
+            self.valid_location(self.shape, self.col, row, true);
         if result {
             let use_col = self.col;
             // move the current shape, and clear its old position before moving
@@ -228,11 +230,11 @@ impl Tetris {
         self.level
     }
 
-    pub fn get_next_shape(&self) -> [Point; POINT_COUNT] {
+    pub fn get_next_shape(&self) -> [Point; POINT_COUNT as usize] {
         self.next_shape
     }
 
-    pub fn get_next_shape_index(&self) -> usize {
+    pub fn get_next_shape_index(&self) -> i32 {
         self.next_shape_index
     }
 
@@ -271,8 +273,8 @@ impl Tetris {
         self.rows_completed_level = 0;
         self.clear_grid();
         // next shape is a random shape
-        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT);
-        self.next_shape = SHAPES[self.next_shape_index];
+        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
+        self.next_shape = SHAPES[self.next_shape_index as usize];
         // add a new shape on the board
         self.new_shape();
     }
@@ -318,17 +320,17 @@ impl Tetris {
 
     /// Clear the entire game board
     fn clear_grid(&mut self) {
-        self.grid = [[GridCell::default(); ROW_COUNT]; COL_COUNT];
+        self.grid = [[GridCell::default(); ROW_COUNT as usize]; COL_COUNT as usize];
     }
 
     /// Add a new shape on the board.
     fn new_shape(&mut self) -> bool {
         self.row = 0;
-        self.col = COL_COUNT / 2;
+        self.col = COL_COUNT as i32 / 2;
         self.shape_index = self.next_shape_index;
-        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT);
-        self.next_shape = SHAPES[self.next_shape_index];
-        self.shape = SHAPES[self.shape_index];
+        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
+        self.next_shape = SHAPES[self.next_shape_index as usize];
+        self.shape = SHAPES[self.shape_index as usize];
         let result: bool = self.valid_location(self.shape, self.col, self.row, true);
         if result {
             let use_col = self.col;
@@ -340,7 +342,7 @@ impl Tetris {
 
     /// Compute the actual point on the grid based on a shape point and row, col values
     /// The resulting point may be out of bounds
-    fn get_grid_point(&self, col: usize, row: usize, point: Point) -> Point {
+    fn get_grid_point(&self, col: i32, row: i32, point: Point) -> Point {
         Point { 
             x: col as i16 + point.x, 
             y: row as i16 + point.y
@@ -349,7 +351,7 @@ impl Tetris {
 
     /// Given a shape and col, row values, determine if the shape is in a valid position,
     /// keeping in mind that some or all of the points can be out of bounds at the top of the grid.
-    fn valid_location(&self, shape: [Point; POINT_COUNT], col: usize, row: usize, check_sides: bool) -> bool {
+    fn valid_location(&self, shape: [Point; POINT_COUNT as usize], col: i32, row: i32, check_sides: bool) -> bool {
         let mut result: bool = true;
         // test to see if we can successfully place the shape in the new location...
         for point in shape.iter() {
@@ -358,8 +360,8 @@ impl Tetris {
             if (check_sides && (grid_point.x < 0 || grid_point.x >= COL_COUNT as i16)) ||
                 //grid_point.y < 0 || (it's ok for the y position to be outside grid at the top)
                 grid_point.y >= ROW_COUNT as i16 ||
-                // ok to downcast to unsigned after checking in bounds...
                 (self.point_in_bounds(col, row, *point) && 
+                    // ok to cast to unsigned after checking in bounds...
                     self.grid[grid_point.x as usize][grid_point.y as usize].cell_type == GridCellType::Fixed) {
                 result = false;
                 break;
@@ -371,7 +373,7 @@ impl Tetris {
     /// Place a shape onto the game board at the specified col, row.
     /// If clear_before is true, then base on the shape's current position, 
     /// set the grid cells to Void
-    fn move_shape(&mut self, col: usize, row: usize, clear_before: bool) {
+    fn move_shape(&mut self, col: i32, row: i32, clear_before: bool) {
         if clear_before {
             self.clear_shape();
         }
@@ -389,7 +391,7 @@ impl Tetris {
             if self.point_in_bounds(col, row, *point) {
                 let grid_point: Point = self.get_grid_point(col, row, *point);
 
-                // it's safe to downcast from signed to unsigned since point_in_bounds is true
+                // it's safe to cast from signed to unsigned since point_in_bounds is true
                 let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
                 assert!(grid_cell.cell_type == GridCellType::Void ||
                     grid_cell.cell_type == GridCellType::Ghost);
@@ -411,7 +413,7 @@ impl Tetris {
     /// Determine if a given shape point is within the bounds of the grid relative to col, row
     /// See also SHAPES const which defines each point
     /// See also self.valid_location()
-    fn point_in_bounds(&self, col: usize, row: usize, point: Point) -> bool {
+    fn point_in_bounds(&self, col: i32, row: i32, point: Point) -> bool {
         let grid_point: Point = self.get_grid_point(col, row, point);
         grid_point.x >= 0 &&
             grid_point.x < COL_COUNT as i16 &&
@@ -426,7 +428,7 @@ impl Tetris {
         for point in self.shape.iter() {
             if self.point_in_bounds(self.col, self.row, *point) {
                 let grid_point: Point = self.get_grid_point(self.col, self.row, *point);
-                // it's safe to downcast from signed to unsigned since point_in_bounds is true
+                // it's safe to cast from signed to unsigned since point_in_bounds is true
                 let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
                 assert!(grid_cell.cell_type == GridCellType::Shape);
 
@@ -464,7 +466,7 @@ impl Tetris {
         for point in self.shape.iter() {
             if self.point_in_bounds(self.col, self.row, *point) {
                 let grid_point: Point = self.get_grid_point(self.col, self.row, *point);
-                // it's safe to downcast from signed to unsigned since point_in_bounds is true
+                // it's safe to cast from signed to unsigned since point_in_bounds is true
                 let grid_cell = &mut self.grid[grid_point.x as usize][grid_point.y as usize];
 
                 assert!(grid_cell.cell_type == GridCellType::Shape);
@@ -479,12 +481,13 @@ impl Tetris {
     /// then a bonus score can be computed.
     fn complete_rows(&mut self) -> u8 {
         let mut result = 0;
-        let mut row: usize = ROW_COUNT - 1;
-        loop {
+        let mut row: i32 = ROW_COUNT as i32 - 1;
+        while row >= 0 {
+            let row_index: usize = row as usize;
             // look for any void spots on this row
             let mut found_void = false;
-            for col in 0..COL_COUNT {
-                if self.grid[col][row].cell_type == GridCellType::Void {
+            for col in 0..COL_COUNT as usize {
+                if self.grid[col][row_index].cell_type == GridCellType::Void {
                     found_void = true;
                     break;
                 }
@@ -496,39 +499,28 @@ impl Tetris {
                 self.rows_completed += 1;
 
                 // make all cells on this row void
-                for col in 0..COL_COUNT {
-                    self.grid[col][row].cell_type = GridCellType::Void;
-                    self.grid[col][row].shape_index = -1;
+                for col in 0..COL_COUNT as usize {
+                    self.grid[col][row_index].cell_type = GridCellType::Void;
+                    self.grid[col][row_index].shape_index = -1;
                 }
 
                 // bring all rows above row down one...
-                if row > 0 {
-                    for col in 0..COL_COUNT {
-                        let mut temp_row: usize = row - 1;
-                        loop {
-                            self.grid[col][temp_row + 1].shape_index = self.grid[col][temp_row].shape_index;
-                            self.grid[col][temp_row + 1].cell_type = self.grid[col][temp_row].cell_type;
-                            if temp_row > 0 {
-                                // note temp_row is unsigned
-                                temp_row -= 1;
-                            } else {
-                                break;
-                            }
-                        }
+                for col in 0..COL_COUNT as usize {
+                    // iterate in reverse starting from row - 1, back to 0...
+                    for temp_row in (0..row as usize).rev() {
+                        self.grid[col][temp_row + 1].shape_index = self.grid[col][temp_row].shape_index;
+                        self.grid[col][temp_row + 1].cell_type = self.grid[col][temp_row].cell_type;
                     }
                 }
-            } else if row > 0 {
-                // row decrements but we must be careful not to overflow as row is unsigned
-                row -= 1;
             } else {
-                break;
+                row -= 1;
             }
         }
         result
     }
 
     /// Given a shape, rotate each point of the shape to a new quadrant
-    fn rotate_shape(&self, clockwise: bool, shape: &mut [Point; POINT_COUNT]) {
+    fn rotate_shape(&self, clockwise: bool, shape: &mut [Point; POINT_COUNT as usize]) {
         for point in &mut shape.iter_mut() {
             // transform each point to next quadrant...
             if !clockwise {
@@ -550,22 +542,19 @@ impl Tetris {
         // square piece doesn't rotate, so no need to wall kick
         if self.shape_index != SQUARE_SHAPE_INDEX {
             // if on left side of the board, then kick to right, e.g. +1, else -1
-            let increment = if self.col < COL_COUNT / 2 {
+            let increment = if self.col < COL_COUNT as i32 / 2 {
                 1
             } else {
                 -1
             };
             for point in self.shape.iter() {
-                let mut kick_col: usize = self.col;
+                let mut kick_col: i32 = self.col;
                 // loop until we've shifted kick_col appropriately for this point's x value
                 loop {
                     let grid_x: i16 = kick_col as i16 + point.x;
-                    // if not in bounds, then we may need to kick left/right
+                    // if not in bounds, then kick left/right
                     if grid_x < 0 || grid_x >= COL_COUNT as i16 {
-                        // kick left/right; note we're assuming we won't overflow by going negative
-                        // note an overflow will occur if we write it like this:
-                        // kick_col += increment;
-                        kick_col = kick_col.wrapping_add(increment);
+                        kick_col += increment;
                     } else {
                         // point is in bounds so no need to kick any more for this point
                         break;

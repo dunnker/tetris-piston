@@ -98,8 +98,8 @@ impl App {
                     c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + (LINE_HEIGHT * 7f64)).transform, gl);
             }
 
-            for col in 0..COL_COUNT {
-                for row in 0..ROW_COUNT {
+            for col in 0..COL_COUNT as i32 {
+                for row in 0..ROW_COUNT as i32 {
                     let cell = temp_tetris.get_grid_cell(col, row);
                     if cell.cell_type != GridCellType::Void {
                         let (x, y) = (col as f64 * CELL_SIZE + LEFT_MARGIN, row as f64 * CELL_SIZE + TOP_MARGIN);
@@ -158,15 +158,12 @@ impl App {
     fn handle_input(&mut self, i: Input) {
         match i {
             Input::Press(Keyboard(Key::Left)) => { 
-                let col: usize = self.tetris.get_col();
-                // !! must check, otherwise could get overflow
-                if col > 0 {
-                    self.tetris.set_col(col - 1);
-                }
+                let col: i32 = self.tetris.get_col();
+                self.tetris.set_col(col - 1);
             },
 
             Input::Press(Keyboard(Key::Right)) => { 
-                let col: usize = self.tetris.get_col();
+                let col: i32 = self.tetris.get_col();
                 self.tetris.set_col(col + 1);
             },
 
@@ -175,7 +172,7 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::Down)) => { 
-                let mut row: usize = self.tetris.get_row() + 1;
+                let mut row: i32 = self.tetris.get_row() + 1;
                 while self.tetris.set_row(row) {
                     row += 1;
                 }
