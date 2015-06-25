@@ -11,8 +11,8 @@ use piston::event::*;
 use glutin_window::GlutinWindow as Glutin_Window;
 use opengl_graphics::{ GlGraphics, OpenGL };
 use opengl_graphics::glyph_cache::GlyphCache;
-use graphics::{ /* Graphics, */ Transformed, /* ImageSize */ };
-use piston::input::Button::{ Keyboard /*, Mouse */ };
+use graphics::{ Transformed };
+use piston::input::Button::{ Keyboard };
 use piston::input::Input;
 use piston::input::keyboard::Key;
 use std::path::Path;
@@ -60,11 +60,12 @@ impl App {
 
         const STATUS_LEFT_MARGIN: f64 = 400f64;
         const STATUS_TOP_MARGIN: f64 = 100f64;
-        const LINE_HEIGHT: f64 = 50f64;
+        const LINE_HEIGHT: f64 = 40f64;
+        const STATUS_PREVIEW_GRID_HEIGHT: f64 = CELL_SIZE * 6f64;
 
         // so that we can access inside clojure
-        let temp_cache = &mut self.cache;
-        let temp_tetris = &mut self.tetris;
+        let use_cache = &mut self.cache;
+        let use_tetris = &mut self.tetris;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // clear the viewport
@@ -73,30 +74,40 @@ impl App {
             // render the current score and level
             let mut text = graphics::Text::new(22);
             text.color = ORANGE;
-            text.draw(&format!("Level: {}", temp_tetris.get_level()), temp_cache, &c.draw_state, 
-                c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN).transform, gl);
-            text.draw(&format!("Score: {}", temp_tetris.get_score()), temp_cache, &c.draw_state, 
-                c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + LINE_HEIGHT).transform, gl);
+            let mut transform = c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN);
+            text.draw(&format!("Level: {}", use_tetris.get_level()), use_cache, &c.draw_state, 
+                transform.transform, gl);
+            transform = transform.trans(0f64, LINE_HEIGHT);
+
+            text.draw(&format!("Score: {}", use_tetris.get_score()), use_cache, &c.draw_state, 
+                transform.transform, gl);
+            transform = transform.trans(0f64, LINE_HEIGHT);
 
             // render the next shape as a preview of what's coming next
-            for point in temp_tetris.get_next_shape().iter() {
-                let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE + STATUS_LEFT_MARGIN, 
-                    (2 as i16 + point.y) as f64 * CELL_SIZE + STATUS_TOP_MARGIN + (LINE_HEIGHT * 2f64));
-                let square = graphics::rectangle::square(x, y, CELL_SIZE);
-                let color = get_shape_color(temp_tetris.get_next_shape_index() as i32);
-                graphics::rectangle(color, square, c.transform, gl);                    
+            for point in use_tetris.get_next_shape().iter() {
+                let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE);
+                let color = get_shape_color(use_tetris.get_next_shape_index() as i32);
+                // render the shape at col 2 and row 2
+                let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE, 
+                    (2 as i16 + point.y) as f64 * CELL_SIZE);
+                graphics::rectangle(color, square, transform.trans(x, y).transform, gl); 
             }
+            transform = transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT);
 
             // render GAME OVER text if necessary
-            if temp_tetris.get_game_over() {
-                text.draw(&"GAME OVER", temp_cache, &c.draw_state, 
-                    c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + (LINE_HEIGHT * 6f64)).transform, gl);
-                text.draw(&"Press 'N' for a new game", temp_cache, &c.draw_state, 
-                    c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN + (LINE_HEIGHT * 7f64)).transform, gl);
+            if use_tetris.get_game_over() {
+                text.draw(&"GAME OVER", use_cache, &c.draw_state, 
+                    transform.transform, gl);
+                transform = transform.trans(0f64, LINE_HEIGHT);
+
+                text.draw(&"Press 'N' for a new game", use_cache, &c.draw_state, 
+                    transform.transform, gl);
+                // uncomment if drawing additional text in the status area
+                //transform = transform.trans(0f64, LINE_HEIGHT);
             }
 
             // draw a white border around the game board
-            let rect_border = graphics::Rectangle::new_border(WHITE, 1.0);
+            let rect_border = graphics::Rectangle::new_border(WHITE, 1.5);
             rect_border.draw([
                 LEFT_MARGIN,
                 TOP_MARGIN,
@@ -107,10 +118,10 @@ impl App {
             // render each cell in the game board
             for col in 0..COL_COUNT as i32 {
                 for row in 0..ROW_COUNT as i32 {
-                    let cell = temp_tetris.get_grid_cell(col, row);
+                    let cell = use_tetris.get_grid_cell(col, row);
                     if cell.cell_type != GridCellType::Void {
-                        let (x, y) = (col as f64 * CELL_SIZE + LEFT_MARGIN, row as f64 * CELL_SIZE + TOP_MARGIN);
-                        let square = graphics::rectangle::square(x, y, CELL_SIZE);
+                        let (x, y) = (col as f64 * CELL_SIZE, row as f64 * CELL_SIZE);
+                        let square = graphics::rectangle::square(0.0f64, 0.0f64, CELL_SIZE);
                         let color = match cell.cell_type {
                             GridCellType::Shape => get_shape_color(cell.shape_index),
                             GridCellType::Fixed => get_shape_color(cell.shape_index),
@@ -120,7 +131,7 @@ impl App {
                                 BLACK
                             }
                         };
-                        graphics::rectangle(color, square, c.transform, gl);                    
+                        graphics::rectangle(color, square, c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y), gl);                    
                     }
                 }
             }
@@ -133,29 +144,8 @@ impl App {
         } else {
             // Here we increment the time elapsed between update()'s
             self.elapsed_time += args.dt;
-
-            // The time it takes for a shape to advance to a new row will be called tick_time.
-            // As the level increases we want tick_time to decrease, so the game gets harder and harder.
-            // The rate at which we're decreasing will be our slope.
-            // The equation of a line is y - y' = m(x - x')
-            // ...where m is the slope, x represents the level and y represents the tick_time.
-            // Solving for y we get: y = m(x - x') + y'
-            // Now, choosing a starting level (x') and an arbitrary starting time (y')
-            // we can calculate the tick_time for any level.
-            // However, in the later levels (by level 10), we want the slope to decrease, so that the
-            // game doesn't get as hard between levels. So after level 9 pick a new slope and time.
-            const STARTING_SLOPE: f32 = -0.08f32;
-            const STARTING_TIME: f32 = 1.0f32;
-            const ENDING_SLOPE: f32 = -0.012f32;
-            const ENDING_TIME: f32 = 0.25f32;
-            let tick_time = if self.tetris.get_level() < 10 {
-                (STARTING_SLOPE * (self.tetris.get_level() - 0) as f32) + STARTING_TIME
-            } else {
-                (ENDING_SLOPE * (self.tetris.get_level() - 10) as f32) + ENDING_TIME
-            };
-
-            // if the time elapsed is now greater than the time between shapes, then 
-            if self.elapsed_time > tick_time as f64 {
+            // if the elapsed time is now greater than the time allotted between ticks, then invoke tetris.tick()
+            if self.elapsed_time > self.tetris.get_tick_time() as f64 {
                 self.elapsed_time = 0.0;
                 self.tetris.tick();
             }
@@ -179,6 +169,11 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::Down)) => { 
+                let row: i32 = self.tetris.get_row() + 1;
+                self.tetris.set_row(row);
+            },
+
+            Input::Press(Keyboard(Key::Space)) => { 
                 let mut row: i32 = self.tetris.get_row() + 1;
                 while self.tetris.set_row(row) {
                     row += 1;
@@ -190,10 +185,6 @@ impl App {
                     self.tetris.start_game();
                 }
             },
-
-            /*Input::Move(MouseCursor(x, y)) => {
-                
-            }*/
 
             _=> {}
         }
@@ -213,7 +204,7 @@ fn start_app() {
             exit_on_esc(true)
     );
     
-    let font_path = Path::new("FiraMono-Bold.ttf");
+    let font_path = Path::new("/home/charles/workspace/tetris-piston/FiraMono-Bold.ttf");
 
     let mut app = App {
         gl: GlGraphics::new(opengl),

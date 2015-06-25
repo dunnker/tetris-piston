@@ -2,6 +2,7 @@
 name = "tetris-piston"
 version = "0.1.0"
 authors = ["charles <charles.mcallister@dunnker.com>"]
+license-file = "license.txt"
 
 [dependencies]
 piston = "0.1.0"

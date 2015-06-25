@@ -310,6 +310,31 @@ impl Tetris {
         }
     }
 
+    /// Calculates the time granted between calls to tick(). As the level increases, the amount
+    /// of time between ticks grows shorter to make the game more difficult at higher levels.
+    pub fn get_tick_time(&self) -> f32 {
+        // The time it takes for a shape to advance to a new row will be called tick_time.
+        // As the level increases we want tick_time to decrease, so the game gets harder and harder.
+        // The rate at which we're decreasing will be our slope.
+        // The equation of a line is y - y' = m(x - x')
+        // ...where m is the slope, x represents the level and y represents the tick_time.
+        // Solving for y we get: y = m(x - x') + y'
+        // Now, choosing a starting level (x') and an arbitrary starting time (y')
+        // we can calculate the tick_time for any level.
+        // However, in the later levels (by level 10), we want the slope to decrease, so that the
+        // game doesn't get as hard between levels. So after level 9 pick a new slope and time.
+        const STARTING_SLOPE: f32 = -0.08f32;
+        const STARTING_TIME: f32 = 1.0f32;
+        const ENDING_SLOPE: f32 = -0.012f32;
+        const ENDING_TIME: f32 = 0.25f32;
+
+        if self.level < 10 {
+            (STARTING_SLOPE * (self.level - 0) as f32) + STARTING_TIME
+        } else {
+            (ENDING_SLOPE * (self.level - 10) as f32) + ENDING_TIME
+        }
+    }
+
     /// Ends the game. However, the current state of the game is preserved (e.g. not clearing the game board)
     /// because rendering code might still display the board
     pub fn end_game(&mut self) {
