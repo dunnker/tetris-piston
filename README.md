@@ -23,7 +23,7 @@ cargo run
 
 ### Note regarding Windows
 
-To build under Windows, be sure to follow the instructions regarding Windows in the [Piston Tutorials/getting-started project](https://github.com/bvssvni/Piston-Tutorials/tree/master/getting-started)
+To build under Windows, be sure to follow the instructions regarding Freetype for Windows in the [Piston Tutorials/getting-started project](https://github.com/bvssvni/Piston-Tutorials/tree/master/getting-started)
 
 # Notes about the code
 The code contains just two modules, main.rs and tetris.rs  tetris.rs is meant to be a general library for creating a tetris game as it is not dependent on rendering, timers, keyboard events etc. main.rs contains rendering logic and keyboard events -- all provided by Piston.
