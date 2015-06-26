@@ -25,7 +25,7 @@ cargo run
 
 ### Note regarding Windows
 
-To build under Windows, be sure to follow the instructions regarding Freetype for Windows in the [Piston Tutorials/getting-started project](https://github.com/bvssvni/Piston-Tutorials/tree/master/getting-started)
+To build under Windows, be sure to follow the instructions regarding Freetype for Windows in the [Piston Tutorials/getting-started project](https://github.com/PistonDevelopers/Piston-Tutorials/tree/master/getting-started)
 
 ### Notes about the code
 The code contains just two modules, main.rs and tetris.rs  
