@@ -91,6 +91,9 @@ impl App {
                 let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE, 
                     (2 as i16 + point.y) as f64 * CELL_SIZE);
                 graphics::rectangle(color, square, transform.trans(x, y).transform, gl); 
+                let tetromino_border = graphics::Rectangle::new_border(DARK_GRAY, 1.0);
+                tetromino_border.draw([0f64, 0f64, CELL_SIZE, CELL_SIZE], &c.draw_state, 
+                    transform.trans(x, y).transform, gl);
             }
             transform = transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT);
 
