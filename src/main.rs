@@ -192,6 +192,8 @@ impl App {
                 while self.tetris.set_row(row) {
                     row += 1;
                 }
+                // hard drop immediately spawns next shape
+                self.tetris.tick();
             },
 
             Input::Press(Keyboard(Key::N)) => { 
