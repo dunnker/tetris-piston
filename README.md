@@ -11,6 +11,8 @@ The game has the following features:
 * Ghost tetromino lets you know where the current tetromino will be dropped
 * Wall kick feature automatically shifts the current tetromino to the left or right when rotating next to the side walls
 
+![Screenshot](Screenshot.png?raw=true "Screenshot")
+
 ### Building the project
 
 Assuming you already have Rust installed, to build the game unzip the source code and from a command prompt enter:
@@ -23,7 +25,7 @@ cargo run
 
 ### Note regarding Windows
 
-To build under Windows, be sure to follow the instructions regarding Freetype for Windows in the [Piston Tutorials/getting-started project](https://github.com/bvssvni/Piston-Tutorials/tree/master/getting-started)
+To build under Windows, be sure to follow the instructions regarding Freetype for Windows in the [Piston Tutorials/getting-started project](https://github.com/PistonDevelopers/Piston-Tutorials/tree/master/getting-started)
 
 ### Notes about the code
 The code contains just two modules, main.rs and tetris.rs  
