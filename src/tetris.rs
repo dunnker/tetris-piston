@@ -256,18 +256,21 @@ impl Tetris {
                 self.rotate_shape(clockwise, &mut shape);
             }
             // if this new shape is in a valid position (not checking sides because we can wall kick)...
-            let result: bool = self.valid_location(shape, self.col, self.row, false);
+            let mut result: bool = self.valid_location(shape, self.col, self.row, false);
             if result {
-                // ...then remove the current shape from the board
-                self.clear_shape(); // normally move_shape will take care of this, however, the shape itself is changing (not just position)
-                // ...then assign the copy to the current shape
-                self.shape = shape;
                 // perform wall kick if necessary
-                self.wall_kick();
-                let use_col = self.col;
-                let use_row = self.row;
-                // now place the current shape back onto the board
-                self.move_shape(use_col, use_row, false);
+                let col = self.wall_kick(shape);
+                result = col >= 0;
+                if result {
+                    // ...then remove the current shape from the board
+                    self.clear_shape(); // normally move_shape will take care of this, however, the shape itself is changing (not just position)
+                    // ...then assign the copy to the current shape
+                    self.shape = shape;
+                    self.col = col;
+                    let use_row = self.row;
+                    // now place the current shape back onto the board
+                    self.move_shape(col, use_row, false);
+                }
             }
             result
         } else {
@@ -550,37 +553,42 @@ impl Tetris {
         }
     }
 
-    /// Calculate a new column if any of the points of the shape are out of bounds to the left or right
-    /// This function assumes the shape is already cleared from the board, and we've just performed
-    /// a rotation, so part of the shape may be out of bounds to the left or right.
-    fn wall_kick(&mut self) {
+    /// Calculate a new column if any of the points of the supplied shape are out of bounds to the left or right
+    /// The resulting col position will be offset from the current self.col if a valid location is found,
+    /// otherwise -1 is returned
+    fn wall_kick(&mut self, shape: [Point; POINT_COUNT as usize]) -> i32 {
         // square piece doesn't rotate, so no need to wall kick
         if self.shape_index != SQUARE_SHAPE_INDEX {
+            let mut result: i32 = -1;
             // if on left side of the board, then kick to right, e.g. +1, else -1
             let increment = if self.col < COL_COUNT as i32 / 2 {
                 1
             } else {
                 -1
             };
-            for point in self.shape.iter() {
+            for point in shape.iter() {
                 let mut kick_col: i32 = self.col;
-                // loop until we've shifted kick_col appropriately for this point's x value
+                // loop until we've shifted kick_col in bounds for this point's x value
+                // after loop, kick_col will be in bounds but not necessarily in valid location
                 loop {
-                    let grid_x: i16 = kick_col as i16 + point.x;
+                    let grid_x = kick_col + point.x as i32;
                     // if not in bounds, then kick left/right
-                    if grid_x < 0 || grid_x >= COL_COUNT as i16 {
+                    if grid_x < 0 || grid_x >= COL_COUNT as i32 {
                         kick_col += increment;
                     } else {
-                        // point is in bounds so no need to kick any more for this point
                         break;
                     }
                 }
-                // we may have kicked to a new colum, so ensure this is a valid location
+                // ensure kick_col is a valid location
                 // e.g. we may have kicked into a place where there are Fixed cells
-                if self.valid_location(self.shape, kick_col, self.row, true) {
-                    self.col = kick_col;
+                if self.valid_location(shape, kick_col, self.row, true) {
+                    result = kick_col;
+                    break;
                 }
             }
+            result
+        } else {
+            self.col
         }
     }
 }
