@@ -367,7 +367,7 @@ impl Tetris {
 
     /// Add a new shape on the board.
     fn new_shape(&mut self) -> bool {
-        self.row = -1;
+        self.row = 0;
         self.col = COL_COUNT as i32 / 2;
         self.shape_index = self.next_shape_index;
         self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
