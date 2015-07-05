@@ -4,7 +4,7 @@ extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate rand;
 
-mod tetris;
+pub mod tetris;
 
 use piston::window::WindowSettings;
 use piston::event::*;
@@ -19,7 +19,7 @@ use std::path::Path;
 
 use tetris::*;
 
-pub struct App {
+struct App {
     gl: GlGraphics,
     tetris: Tetris,
     elapsed_time: f64,
