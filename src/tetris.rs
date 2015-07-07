@@ -139,6 +139,8 @@ pub struct Tetris {
     next_shape_index: i32,
     /// The current level number
     level: u32,
+    /// The starting level when the game starts
+    starting_level: u32,
     /// The number of rows completed for the current level
     rows_completed_level: u8,
     /// The current score
@@ -163,6 +165,7 @@ impl Tetris {
             row: 0,
             ghost_row: 0,
             level: 0,
+            starting_level: 0,
             score: 0,
             rows_completed: 0,
             rows_completed_level: 0,
@@ -234,6 +237,14 @@ impl Tetris {
         self.score
     }
 
+    pub fn get_starting_level(&self) -> u32 {
+        self.starting_level
+    }
+
+    pub fn set_starting_level(&mut self, value: u32) {
+        self.starting_level = value;
+    }
+
     pub fn get_level(&self) -> u32 {
         self.level
     }
@@ -282,7 +293,7 @@ impl Tetris {
     pub fn start_game(&mut self) {
         if self.game_over {
             self.game_over = false;
-            self.level = 0;
+            self.level = self.starting_level;
             self.score = 0;
             self.rows_completed = 0;
             self.rows_completed_level = 0;

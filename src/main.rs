@@ -116,6 +116,10 @@ impl App {
                 
                 text.draw(&"Press spacebar to drop", use_cache, &c.draw_state, 
                     transform.transform, gl);
+                transform = transform.trans(0f64, LINE_HEIGHT);
+
+                text.draw(&"Press 'L' to start at level 10", use_cache, &c.draw_state, 
+                    transform.transform, gl);
                 // uncomment if drawing additional text in the status area
                 //transform = transform.trans(0f64, LINE_HEIGHT);
             }
@@ -204,6 +208,10 @@ impl App {
 
             Input::Press(Keyboard(Key::N)) => { 
                 self.tetris.start_game();
+            },
+
+            Input::Press(Keyboard(Key::L)) => { 
+                self.tetris.set_starting_level(9);
             },
 
             _ => {
