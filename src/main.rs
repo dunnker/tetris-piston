@@ -4,7 +4,7 @@ extern crate glutin_window;
 extern crate opengl_graphics;
 extern crate rand;
 
-mod tetris;
+pub mod tetris;
 
 use piston::window::WindowSettings;
 use piston::event::*;
@@ -19,11 +19,12 @@ use std::path::Path;
 
 use tetris::*;
 
-pub struct App {
+struct App {
     gl: GlGraphics,
     tetris: Tetris,
     elapsed_time: f64,
-    cache: GlyphCache<'static>
+    cache: GlyphCache<'static>,
+    should_redraw: bool
 }
 
 const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -54,6 +55,8 @@ fn get_shape_color(shape_index: i32) -> [f32; 4] {
 
 impl App {
     fn render(&mut self, args: &RenderArgs) {
+        self.should_redraw = false;
+
         const CELL_SIZE: f64 = 30.0;
         const LEFT_MARGIN: f64 = 20f64;
         const TOP_MARGIN: f64 = 30f64;
@@ -162,11 +165,14 @@ impl App {
             if self.elapsed_time > self.tetris.get_tick_time() as f64 {
                 self.elapsed_time = 0.0;
                 self.tetris.tick();
+                self.should_redraw = true;
             }
         }
     }
 
     fn handle_input(&mut self, i: Input) {
+        let prev_should_redraw = self.should_redraw;
+        self.should_redraw = true;
         match i {
             Input::Press(Keyboard(Key::Left)) => { 
                 let col: i32 = self.tetris.get_col();
@@ -200,7 +206,9 @@ impl App {
                 self.tetris.start_game();
             },
 
-            _=> {}
+            _ => {
+                self.should_redraw = prev_should_redraw;
+            }
         }
     }
 }
@@ -214,8 +222,10 @@ fn start_app() {
 
     let window = Glutin_Window::new(
         opengl,
-        WindowSettings::new("Piston Tetris", [1024, 768]).
-            exit_on_esc(true)
+        WindowSettings::new("Piston Tetris", [1024, 768])
+                       .exit_on_esc(true)
+                       .vsync(true)
+                       .samples(1)
     );
     
     let font_path = Path::new("FiraMono-Bold.ttf");
@@ -225,24 +235,21 @@ fn start_app() {
         tetris: Tetris::new(),
         elapsed_time: 0.0,
         cache: GlyphCache::new(font_path).unwrap(),
+        should_redraw: true,
     };  
 
-    for e in window.events() {
+    for e in window.events().max_fps(30).ups(30) {
         match e {
             Event::Input(i) => {
-                app.handle_input(i.clone());
+                app.handle_input(i);
             }
 
-            Event::Render(_) => {
-                if let Some(r) = e.render_args() {
-                    app.render(&r);
-                }
+            Event::Render(args) if app.should_redraw => {
+                app.render(&args);
             }
 
-            Event::Update(_) => {
-                if let Some(u) = e.update_args() {
-                    app.update(&u);
-                }
+            Event::Update(args) => {
+                app.update(&args);
             }
 
             _ => {}
