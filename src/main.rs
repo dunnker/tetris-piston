@@ -211,7 +211,7 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::L)) => { 
-                self.tetris.set_starting_level(9);
+                self.tetris.set_starting_level(10);
             },
 
             _ => {
