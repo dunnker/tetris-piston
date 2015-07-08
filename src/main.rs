@@ -88,15 +88,15 @@ impl App {
 
             // render the next shape as a preview of what's coming next
             for point in use_tetris.get_next_shape().iter() {
-                let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE);
+                let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE - 1f64);
                 let color = get_shape_color(use_tetris.get_next_shape_index() as i32);
                 // render the shape at col 2 and row 2
                 let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE, 
                     (2 as i16 + point.y) as f64 * CELL_SIZE);
-                graphics::rectangle(color, square, transform.trans(x, y).transform, gl); 
-                let tetromino_border = graphics::Rectangle::new_border(DARK_GRAY, 1.0);
-                tetromino_border.draw([0f64, 0f64, CELL_SIZE, CELL_SIZE], &c.draw_state, 
-                    transform.trans(x, y).transform, gl);
+                //graphics::rectangle(color, square, transform.trans(x, y).transform, gl); 
+                let mut rectangle = graphics::Rectangle::new(color);
+                rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
+                rectangle.draw(square, &c.draw_state, transform.trans(x, y).transform, gl);
             }
             transform = transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT);
 
@@ -143,7 +143,7 @@ impl App {
                     let cell = use_tetris.get_grid_cell(col, row);
                     if cell.cell_type != GridCellType::Void {
                         let (x, y) = (col as f64 * CELL_SIZE, row as f64 * CELL_SIZE);
-                        let square = graphics::rectangle::square(0.0f64, 0.0f64, CELL_SIZE);
+                        let square = graphics::rectangle::square(0.0f64, 0.0f64, CELL_SIZE - 1f64);
                         let color = match cell.cell_type {
                             GridCellType::Shape => get_shape_color(cell.shape_index),
                             GridCellType::Fixed => get_shape_color(cell.shape_index),
@@ -154,9 +154,12 @@ impl App {
                             }
                         };
                         let transform = c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y);
-                        graphics::rectangle(color, square, transform, gl);                    
-                        let tetromino_border = graphics::Rectangle::new_border(DARK_GRAY, 1.0);
-                        tetromino_border.draw([0f64, 0f64, CELL_SIZE, CELL_SIZE], &c.draw_state, transform, gl);
+
+                        //graphics::rectangle(color, square, transform, gl);                    
+
+                        let mut rectangle = graphics::Rectangle::new(color);
+                        rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
+                        rectangle.draw(square, &c.draw_state, transform, gl);
                     }
                 }
             }
@@ -247,7 +250,8 @@ fn start_app() {
         WindowSettings::new("Piston Tetris", [1024, 768])
                        .exit_on_esc(true)
                        .vsync(true)
-                       .samples(1)
+                       //TODO causes error on ubuntu
+                       //.samples(1)
     );
     
     let font_path = Path::new("FiraMono-Bold.ttf");
