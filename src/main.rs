@@ -222,8 +222,10 @@ impl App {
             },
 
             Input::Press(Keyboard(Key::L)) => { 
-                let new_level: u32 = self.tetris.get_starting_level() + 1;
-                self.tetris.set_starting_level(new_level); 
+                if self.tetris.get_starting_level() < 30 {
+                    let new_level: u32 = self.tetris.get_starting_level() + 1;
+                    self.tetris.set_starting_level(new_level); 
+                }
             },
 
             _ => {
