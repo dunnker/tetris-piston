@@ -118,8 +118,12 @@ impl App {
                     transform.transform, gl);
                 transform = transform.trans(0f64, LINE_HEIGHT);
 
-                text.draw(&"Press 'L' to start at level 10", use_cache, &c.draw_state, 
-                    transform.transform, gl);
+                text.draw(&format!("Press 'K' to decrease starting level ({})", use_tetris.get_starting_level()), 
+                    use_cache, &c.draw_state, transform.transform, gl);
+                transform = transform.trans(0f64, LINE_HEIGHT);
+
+                text.draw(&format!("Press 'L' to increase starting level ({})", use_tetris.get_starting_level()), 
+                    use_cache, &c.draw_state, transform.transform, gl);
                 // uncomment if drawing additional text in the status area
                 //transform = transform.trans(0f64, LINE_HEIGHT);
             }
@@ -210,8 +214,16 @@ impl App {
                 self.tetris.start_game();
             },
 
+            Input::Press(Keyboard(Key::K)) => { 
+                if self.tetris.get_starting_level() > 0 {
+                    let new_level: u32 = self.tetris.get_starting_level() - 1;
+                    self.tetris.set_starting_level(new_level); 
+                }
+            },
+
             Input::Press(Keyboard(Key::L)) => { 
-                self.tetris.set_starting_level(10);
+                let new_level: u32 = self.tetris.get_starting_level() + 1;
+                self.tetris.set_starting_level(new_level); 
             },
 
             _ => {
