@@ -27,8 +27,9 @@ struct App {
     should_redraw: bool
 }
 
-const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+//const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 const BLACK: [f32; 4] = [0.0, 0.0, 0.0, 1.0];
+const LIGHT_GRAY: [f32; 4] = [0.3, 0.3, 0.3, 1.0];
 const DARK_GRAY: [f32; 4] = [0.1, 0.1, 0.1, 1.0];
 const GREEN: [f32; 4] = [0.0, 1.0, 0.0, 1.0];
 const CYAN: [f32; 4] = [0.0, 1.0, 1.0, 1.0];
@@ -129,7 +130,7 @@ impl App {
             }
 
             // draw a white border around the game board
-            let rect_border = graphics::Rectangle::new_border(DARK_GRAY, 1.5);
+            let rect_border = graphics::Rectangle::new_border(LIGHT_GRAY, 1.5);
             rect_border.draw([
                 LEFT_MARGIN - 2f64,
                 TOP_MARGIN - 2f64,
