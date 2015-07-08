@@ -122,7 +122,7 @@ impl App {
                     use_cache, &c.draw_state, transform.transform, gl);
                 transform = transform.trans(0f64, LINE_HEIGHT);
 
-                text.draw(&format!("Press 'L' to increase starting level ({})", use_tetris.get_starting_level()), 
+                text.draw(&"Press 'L' to increase starting level", 
                     use_cache, &c.draw_state, transform.transform, gl);
                 // uncomment if drawing additional text in the status area
                 //transform = transform.trans(0f64, LINE_HEIGHT);
@@ -258,7 +258,7 @@ fn start_app() {
         should_redraw: true,
     };  
 
-    for e in window.events().max_fps(30).ups(30) {
+    for e in window.events().max_fps(60).ups(120) {
         match e {
             Event::Input(i) => {
                 app.handle_input(i);
