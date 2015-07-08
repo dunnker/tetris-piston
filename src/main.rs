@@ -129,12 +129,12 @@ impl App {
             }
 
             // draw a white border around the game board
-            let rect_border = graphics::Rectangle::new_border(WHITE, 1.5);
+            let rect_border = graphics::Rectangle::new_border(DARK_GRAY, 1.5);
             rect_border.draw([
-                LEFT_MARGIN,
-                TOP_MARGIN,
-                (CELL_SIZE * COL_COUNT as f64) + 1f64,
-                (CELL_SIZE * ROW_COUNT as f64) + 1f64,
+                LEFT_MARGIN - 2f64,
+                TOP_MARGIN - 2f64,
+                (CELL_SIZE * COL_COUNT as f64) + 3f64,
+                (CELL_SIZE * ROW_COUNT as f64) + 3f64,
             ], &c.draw_state, c.transform, gl);
 
             // render each cell in the game board
