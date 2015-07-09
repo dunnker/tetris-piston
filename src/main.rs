@@ -54,31 +54,109 @@ fn get_shape_color(shape_index: i32) -> [f32; 4] {
     }
 }
 
+const TEXT_FONT_SIZE: u32 = 22;
+const CELL_SIZE: f64 = 30.0;
+const LEFT_MARGIN: f64 = 20f64;
+const TOP_MARGIN: f64 = 30f64;
+
+const STATUS_LEFT_MARGIN: f64 = 400f64;
+const STATUS_TOP_MARGIN: f64 = 100f64;
+const LINE_HEIGHT: f64 = 40f64;
+const STATUS_PREVIEW_GRID_HEIGHT: f64 = CELL_SIZE * 6f64;
+
+struct Render;
+
+impl Render {
+    pub fn render_cell(c: &graphics::Context, gl: &mut GlGraphics, transform: [[f64; 3]; 2], color: [f32; 4]) {
+        let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE - 1f64);
+        let mut rectangle = graphics::Rectangle::new(color);
+        rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
+        rectangle.draw(square, &c.draw_state, transform, gl);
+    }
+
+    pub fn render_next_shape(c: &graphics::Context, gl: &mut GlGraphics, tetris: &Tetris,
+        transform: graphics::context::Context) -> graphics::context::Context {
+        // render the next shape as a preview of what's coming next
+        for point in tetris.get_next_shape().iter() {
+            let color = get_shape_color(tetris.get_next_shape_index());
+            // render the shape at col 2 and row 2
+            let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE, 
+                (2 as i16 + point.y) as f64 * CELL_SIZE);
+            Render::render_cell(&c, gl, transform.trans(x, y).transform, color);
+        }
+        transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT)
+    }
+
+    pub fn render_game_over_section(c: &graphics::Context, gl: &mut GlGraphics, cache: &mut GlyphCache<'static>, 
+        tetris: &Tetris, transform: graphics::context::Context) -> graphics::context::Context {
+        let mut result: graphics::context::Context = transform;
+        let mut text = graphics::Text::new(TEXT_FONT_SIZE);
+        text.color = ORANGE;
+        text.draw(&"GAME OVER", cache, &c.draw_state, result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+
+        text.draw(&"Press 'N' for a new game", cache, &c.draw_state, result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+
+        text.draw(&"Use arrow keys to move and rotate", cache, &c.draw_state, 
+            result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+        
+        text.draw(&"Press spacebar to drop", cache, &c.draw_state, 
+            result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+
+        text.draw(&format!("Press 'K' to decrease starting level ({})", tetris.get_starting_level()), 
+            cache, &c.draw_state, result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+
+        text.draw(&"Press 'L' to increase starting level", 
+            cache, &c.draw_state, result.transform, gl);
+        result = result.trans(0f64, LINE_HEIGHT);
+        result
+    }
+
+    // renders the game board cells e.g. the current shape, ghost shape, and all prior shapes that are
+    // fixed in place
+    pub fn render_game_board(c: &graphics::Context, gl: &mut GlGraphics, tetris: &Tetris) {
+        for col in 0..COL_COUNT as i32 {
+            for row in 0..ROW_COUNT as i32 {
+                let cell = tetris.get_grid_cell(col, row);
+                if cell.cell_type != GridCellType::Void {
+                    let color = match cell.cell_type {
+                        GridCellType::Shape => get_shape_color(cell.shape_index),
+                        GridCellType::Fixed => get_shape_color(cell.shape_index),
+                        GridCellType::Ghost => DARK_GRAY,
+                        _ => {
+                            assert!(false);
+                            BLACK
+                        }
+                    };
+                    let (x, y) = (col as f64 * CELL_SIZE, row as f64 * CELL_SIZE);
+                    let transform = c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y);
+                    Render::render_cell(&c, gl, transform, color);
+                }
+            }
+        }
+    }
+}
+
 impl App {
     fn render(&mut self, args: &RenderArgs) {
         self.should_redraw = false;
 
-        const CELL_SIZE: f64 = 30.0;
-        const LEFT_MARGIN: f64 = 20f64;
-        const TOP_MARGIN: f64 = 30f64;
-
-        const STATUS_LEFT_MARGIN: f64 = 400f64;
-        const STATUS_TOP_MARGIN: f64 = 100f64;
-        const LINE_HEIGHT: f64 = 40f64;
-        const STATUS_PREVIEW_GRID_HEIGHT: f64 = CELL_SIZE * 6f64;
-
-        // so that we can access inside clojure
+        // so that we can access inside closure
         let use_cache = &mut self.cache;
-        let use_tetris = &mut self.tetris;
+        let use_tetris = &self.tetris;
 
         self.gl.draw(args.viewport(), |c, gl| {
             // clear the viewport
             graphics::clear(BLACK, gl);
 
             // render the current score and level
-            let mut text = graphics::Text::new(22);
+            let mut text = graphics::Text::new(TEXT_FONT_SIZE);
             text.color = ORANGE;
-            let mut transform = c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN);
+            let mut transform: graphics::context::Context = c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN);
             text.draw(&format!("Level: {}", use_tetris.get_level()), use_cache, &c.draw_state, 
                 transform.transform, gl);
             transform = transform.trans(0f64, LINE_HEIGHT);
@@ -87,46 +165,11 @@ impl App {
                 transform.transform, gl);
             transform = transform.trans(0f64, LINE_HEIGHT);
 
-            // render the next shape as a preview of what's coming next
-            for point in use_tetris.get_next_shape().iter() {
-                let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE - 1f64);
-                let color = get_shape_color(use_tetris.get_next_shape_index() as i32);
-                // render the shape at col 2 and row 2
-                let (x, y) = ((2 as i16 + point.x) as f64 * CELL_SIZE, 
-                    (2 as i16 + point.y) as f64 * CELL_SIZE);
-                //graphics::rectangle(color, square, transform.trans(x, y).transform, gl); 
-                let mut rectangle = graphics::Rectangle::new(color);
-                rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
-                rectangle.draw(square, &c.draw_state, transform.trans(x, y).transform, gl);
-            }
-            transform = transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT);
+            transform = Render::render_next_shape(&c, gl, use_tetris, transform);
 
             // render GAME OVER text if necessary
             if use_tetris.get_game_over() {
-                text.draw(&"GAME OVER", use_cache, &c.draw_state, 
-                    transform.transform, gl);
-                transform = transform.trans(0f64, LINE_HEIGHT);
-
-                text.draw(&"Press 'N' for a new game", use_cache, &c.draw_state, 
-                    transform.transform, gl);
-                transform = transform.trans(0f64, LINE_HEIGHT);
-
-                text.draw(&"Use arrow keys to move and rotate", use_cache, &c.draw_state, 
-                    transform.transform, gl);
-                transform = transform.trans(0f64, LINE_HEIGHT);
-                
-                text.draw(&"Press spacebar to drop", use_cache, &c.draw_state, 
-                    transform.transform, gl);
-                transform = transform.trans(0f64, LINE_HEIGHT);
-
-                text.draw(&format!("Press 'K' to decrease starting level ({})", use_tetris.get_starting_level()), 
-                    use_cache, &c.draw_state, transform.transform, gl);
-                transform = transform.trans(0f64, LINE_HEIGHT);
-
-                text.draw(&"Press 'L' to increase starting level", 
-                    use_cache, &c.draw_state, transform.transform, gl);
-                // uncomment if drawing additional text in the status area
-                //transform = transform.trans(0f64, LINE_HEIGHT);
+                /*transform =*/ Render::render_game_over_section(&c, gl, use_cache, use_tetris, transform);
             }
 
             // draw a white border around the game board
@@ -138,32 +181,7 @@ impl App {
                 (CELL_SIZE * ROW_COUNT as f64) + 3f64,
             ], &c.draw_state, c.transform, gl);
 
-            // render each cell in the game board
-            for col in 0..COL_COUNT as i32 {
-                for row in 0..ROW_COUNT as i32 {
-                    let cell = use_tetris.get_grid_cell(col, row);
-                    if cell.cell_type != GridCellType::Void {
-                        let (x, y) = (col as f64 * CELL_SIZE, row as f64 * CELL_SIZE);
-                        let square = graphics::rectangle::square(0.0f64, 0.0f64, CELL_SIZE - 1f64);
-                        let color = match cell.cell_type {
-                            GridCellType::Shape => get_shape_color(cell.shape_index),
-                            GridCellType::Fixed => get_shape_color(cell.shape_index),
-                            GridCellType::Ghost => DARK_GRAY,
-                            _ => {
-                                assert!(false);
-                                BLACK
-                            }
-                        };
-                        let transform = c.transform.trans(LEFT_MARGIN, TOP_MARGIN).trans(x, y);
-
-                        //graphics::rectangle(color, square, transform, gl);                    
-
-                        let mut rectangle = graphics::Rectangle::new(color);
-                        rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
-                        rectangle.draw(square, &c.draw_state, transform, gl);
-                    }
-                }
-            }
+            Render::render_game_board(&c, gl, use_tetris);
         });
     }
     
