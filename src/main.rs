@@ -230,6 +230,7 @@ impl App {
                 }
                 // hard drop immediately spawns next shape
                 self.tetris.tick();
+                self.elapsed_time = 0.0;
             },
 
             Input::Press(Keyboard(Key::N)) => { 
