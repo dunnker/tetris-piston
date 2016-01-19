@@ -6,17 +6,16 @@ extern crate rand;
 
 pub mod tetris;
 
-use piston::window::WindowSettings;
-use piston::event::*;
-use glutin_window::GlutinWindow as Glutin_Window;
+use piston::window::{ AdvancedWindow, WindowSettings };
+use glutin_window::GlutinWindow as Window;
+use piston::event_loop::*;
 use opengl_graphics::{ GlGraphics, OpenGL };
 use opengl_graphics::glyph_cache::GlyphCache;
 use graphics::{ Transformed };
-use piston::input::Button::{ Keyboard };
-use piston::input::Input;
-use piston::input::keyboard::Key;
-use std::path::Path;
+use piston::input::*;
 
+use std::path::Path;
+use std::fs::OpenOptions;
 use tetris::*;
 
 struct App {
@@ -24,7 +23,6 @@ struct App {
     tetris: Tetris,
     elapsed_time: f64,
     cache: GlyphCache<'static>,
-    should_redraw: bool
 }
 
 //const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -143,8 +141,6 @@ impl Render {
 
 impl App {
     fn render(&mut self, args: &RenderArgs) {
-        self.should_redraw = false;
-
         // so that we can access inside closure
         let use_cache = &mut self.cache;
         let use_tetris = &self.tetris;
@@ -195,35 +191,32 @@ impl App {
             if self.elapsed_time > self.tetris.get_tick_time() as f64 {
                 self.elapsed_time = 0.0;
                 self.tetris.tick();
-                self.should_redraw = true;
             }
         }
     }
 
-    fn handle_input(&mut self, i: Input) {
-        let prev_should_redraw = self.should_redraw;
-        self.should_redraw = true;
-        match i {
-            Input::Press(Keyboard(Key::Left)) => { 
+    fn handle_key_input(&mut self, key: keyboard::Key) {
+        match key {
+            Key::Left => { 
                 let col: i32 = self.tetris.get_col();
                 self.tetris.set_col(col - 1);
             },
 
-            Input::Press(Keyboard(Key::Right)) => { 
+            Key::Right => { 
                 let col: i32 = self.tetris.get_col();
                 self.tetris.set_col(col + 1);
             },
 
-            Input::Press(Keyboard(Key::Up)) => { 
+            Key::Up => { 
                 self.tetris.rotate(true);
             },
 
-            Input::Press(Keyboard(Key::Down)) => { 
+            Key::Down => { 
                 let row: i32 = self.tetris.get_row() + 1;
                 self.tetris.set_row(row);
             },
 
-            Input::Press(Keyboard(Key::Space)) => { 
+            Key::Space => { 
                 let mut row: i32 = self.tetris.get_row() + 1;
                 while self.tetris.set_row(row) {
                     row += 1;
@@ -233,27 +226,25 @@ impl App {
                 self.elapsed_time = 0.0;
             },
 
-            Input::Press(Keyboard(Key::N)) => { 
+            Key::N => { 
                 self.tetris.start_game();
             },
 
-            Input::Press(Keyboard(Key::K)) => { 
+            Key::K => { 
                 if self.tetris.get_starting_level() > 0 {
                     let new_level: u32 = self.tetris.get_starting_level() - 1;
                     self.tetris.set_starting_level(new_level); 
                 }
             },
 
-            Input::Press(Keyboard(Key::L)) => { 
+            Key::L => { 
                 if self.tetris.get_starting_level() < 30 {
                     let new_level: u32 = self.tetris.get_starting_level() + 1;
                     self.tetris.set_starting_level(new_level); 
                 }
             },
 
-            _ => {
-                self.should_redraw = prev_should_redraw;
-            }
+            _ => { }
         }
     }
 }
@@ -263,42 +254,41 @@ fn main() {
 }
 
 fn start_app() {
-    let opengl = OpenGL::_3_2;
+    let opengl = OpenGL::V3_2;
 
-    let window = Glutin_Window::new(
-        opengl,
-        WindowSettings::new("Piston Tetris", [1024, 768])
-                       .exit_on_esc(true)
-                       .vsync(true)
-                       //TODO causes error on ubuntu
-                       //.samples(1)
-    );
+    let mut window: Window = WindowSettings::new("Piston Tetris", [1024, 768]).
+        exit_on_esc(true).
+        opengl(opengl).
+        build().
+        unwrap();
     
-    let font_path = Path::new("FiraMono-Bold.ttf");
+    let font_path = match OpenOptions::new().open("FiraMono-Bold.ttf") {
+        Ok(_) => Path::new("FiraMono-Bold.ttf"),
+        Err(_) => {
+            match OpenOptions::new().open("src/FiraMono-Bold.ttf") {
+                Ok(_) => Path::new("src/FiraMono-Bold.ttf"),
+                Err(_) => panic!("Font file is missing, or does not exist in the current path."),
+            }
+        }
+    };
 
     let mut app = App {
         gl: GlGraphics::new(opengl),
         tetris: Tetris::new(),
         elapsed_time: 0.0,
         cache: GlyphCache::new(font_path).unwrap(),
-        should_redraw: true,
     };  
 
-    for e in window.events().max_fps(60).ups(120) {
-        match e {
-            Event::Input(i) => {
-                app.handle_input(i);
-            }
+    let mut events = window.events();
+    while let Some(e) = events.next(&mut window) {
+        if let Some(Button::Keyboard(key)) = e.press_args() {
+            app.handle_key_input(key);
+        };
 
-            Event::Render(args) if app.should_redraw => {
-                app.render(&args);
-            }
+        if let Some(args) = e.render_args() {
+            app.render(&args);
+        };
 
-            Event::Update(args) => {
-                app.update(&args);
-            }
-
-            _ => {}
-        } 
+        e.update(|args| { app.update(&args); });
     }
 }

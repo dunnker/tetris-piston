@@ -527,19 +527,16 @@ impl Tetris {
                 self.rows_completed_level += 1;
                 self.rows_completed += 1;
 
-                // make all cells on this row void
-                for col in 0..COL_COUNT as usize {
-                    self.grid[col][row_index].cell_type = GridCellType::Void;
-                    self.grid[col][row_index].shape_index = -1;
-                }
-
                 // bring all rows above row down one...
                 for col in 0..COL_COUNT as usize {
                     // iterate in reverse starting from row - 1, back to 0...
-                    for temp_row in (0..row as usize).rev() {
+                    for temp_row in (0..row_index).rev() {
                         self.grid[col][temp_row + 1].shape_index = self.grid[col][temp_row].shape_index;
                         self.grid[col][temp_row + 1].cell_type = self.grid[col][temp_row].cell_type;
                     }
+                    // clear top row
+                    self.grid[col][0].shape_index = -1;
+                    self.grid[col][0].cell_type = GridCellType::Void;
                 }
             } else {
                 row -= 1;
