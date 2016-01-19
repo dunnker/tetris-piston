@@ -1,6 +1,13 @@
 # tetris-piston
 A tetris game written in Rust using the Piston library
 
+### Binaries
+
+For windows [download](bin/tetris-piston-version-3a529c0.zip)
+For Linux [download](bin/tetris-piston-version-6119499.tar.gz)
+
+### About this game
+
 I know the world doesn't need another Tetris clone, however this is a good learning project for me because I've implemented this game in several other languages (Delphi, C#, C++), so it's mostly a matter of translation. But it's also an opportunity to compare Rust to these other languages.
 
 The game has the following features:
