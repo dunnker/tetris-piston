@@ -3,8 +3,8 @@ A tetris game written in Rust using the Piston library
 
 ### Binaries
 
-For windows [download](bin/tetris-piston-version-3a529c0.zip?raw=true)
-For Linux [download](bin/tetris-piston-version-6119499.tar.gz?raw=true)
+* For windows [download](bin/tetris-piston-version-3a529c0.zip?raw=true)
+* For Linux [download](bin/tetris-piston-version-6119499.tar.gz?raw=true)
 
 ### About this game
 
