@@ -254,7 +254,7 @@ fn main() {
 }
 
 fn start_app() {
-    let opengl = OpenGL::V3_2;
+    let opengl = OpenGL::V2_1;
 
     let mut window: Window = WindowSettings::new("Piston Tetris", [1024, 768]).
         exit_on_esc(true).
