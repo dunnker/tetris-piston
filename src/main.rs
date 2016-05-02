@@ -262,10 +262,10 @@ fn start_app() {
         build().
         unwrap();
     
-    let font_path = match OpenOptions::new().open("FiraMono-Bold.ttf") {
+    let font_path = match OpenOptions::new().read(true).open("FiraMono-Bold.ttf") {
         Ok(_) => Path::new("FiraMono-Bold.ttf"),
         Err(_) => {
-            match OpenOptions::new().open("src/FiraMono-Bold.ttf") {
+            match OpenOptions::new().read(true).open("src/FiraMono-Bold.ttf") {
                 Ok(_) => Path::new("src/FiraMono-Bold.ttf"),
                 Err(_) => panic!("Font file is missing, or does not exist in the current path."),
             }
