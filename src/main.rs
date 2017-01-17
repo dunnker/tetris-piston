@@ -6,7 +6,7 @@ extern crate rand;
 
 pub mod tetris;
 
-use piston::window::{ AdvancedWindow, WindowSettings };
+use piston::window::{ WindowSettings };
 use glutin_window::GlutinWindow as Window;
 use piston::event_loop::*;
 use opengl_graphics::{ GlGraphics, OpenGL };
@@ -254,7 +254,7 @@ fn main() {
 }
 
 fn start_app() {
-    let opengl = OpenGL::V2_1;
+    let opengl = OpenGL::V3_2;
 
     let mut window: Window = WindowSettings::new("Piston Tetris", [1024, 768]).
         exit_on_esc(true).

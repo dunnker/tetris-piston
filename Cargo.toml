@@ -5,8 +5,8 @@ authors = ["charles <charles.mcallister@dunnker.com>"]
 license-file = "license.txt"
 
 [dependencies]
-piston = "0.17.0"
-piston2d-opengl_graphics = "0.23.0"
-piston2d-graphics = "0.13.0"
-pistoncore-glutin_window = "0.20.0"
+piston = "0.26.0"
+piston2d-graphics = "0.18.0"
+pistoncore-glutin_window = "0.31.0"
+piston2d-opengl_graphics = "0.35.0"
 rand="0.3.0"

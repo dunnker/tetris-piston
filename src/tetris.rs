@@ -23,6 +23,9 @@ pub const POINT_COUNT: u8 = 4;
 /// The number of rows the player must complete before going to a new level
 pub const ROWS_PER_LEVEL: u8 = 10;
 
+/// Number of shapes in the Random Generator bag
+pub const GENERATOR_BAG_SIZE: u8 = 7;
+
 /// Each tetromino shape is defined by the SHAPES constant.
 /// There are 4 points per shape, and 7 shapes in all.
 /// So SHAPES is a two-dimensional array to get access to 
@@ -149,12 +152,16 @@ pub struct Tetris {
     rows_completed: u32,
     /// Random number generator
     rng: rand::ThreadRng,
+    /// Random shape bag
+    shape_bag: [i32; GENERATOR_BAG_SIZE as usize],
+    /// index into shape bag
+    shape_bag_index: i32,
 }
 
 impl Tetris {
     /// Constructs a new Tetris struct
     pub fn new() -> Tetris {
-        Tetris { 
+        let mut result = Tetris { 
             grid: [[GridCell::default(); ROW_COUNT as usize]; COL_COUNT as usize],
             game_over: true,
             shape_index: 0,
@@ -170,7 +177,18 @@ impl Tetris {
             rows_completed: 0,
             rows_completed_level: 0,
             rng: rand::thread_rng(),
+            shape_bag: [0,1,2,3,4,5,6],
+            shape_bag_index: 0,
+        };
+        // need to generate a random bag 
+        for _ in 0..GENERATOR_BAG_SIZE {
+            let n = result.rng.gen_range(0, GENERATOR_BAG_SIZE as i32);
+            // swap last element with element at index n
+            let tmp = result.shape_bag[n as usize];
+            result.shape_bag[n as usize] = result.shape_bag[GENERATOR_BAG_SIZE as usize - 1];
+            result.shape_bag[GENERATOR_BAG_SIZE as usize - 1] = tmp;
         }
+        result
     }
 
     /// Returns true when no more shapes can be added to the game board
@@ -380,8 +398,28 @@ impl Tetris {
     fn new_shape(&mut self) -> bool {
         self.row = 0;
         self.col = COL_COUNT as i32 / 2;
+        // increment bag index
+        self.shape_bag_index += 1;
+        // set new shape
         self.shape_index = self.next_shape_index;
-        self.next_shape_index = self.rng.gen_range(0, SHAPE_COUNT as i32);
+        // see if we need to generate a new bag
+        if self.shape_bag_index >= (GENERATOR_BAG_SIZE as i32 - 1) {
+            // need to generate a new bag 
+            for _ in 0..GENERATOR_BAG_SIZE {
+                let n = self.rng.gen_range(0, GENERATOR_BAG_SIZE as i32);
+                // swap last element with element at index n
+                let tmp = self.shape_bag[n as usize];
+                self.shape_bag[n as usize] = self.shape_bag[GENERATOR_BAG_SIZE as usize - 1];
+                self.shape_bag[GENERATOR_BAG_SIZE as usize - 1] = tmp;
+            }
+            // set next shape 
+            self.next_shape_index = self.shape_bag[0];
+            // reset bag index to 0
+            self.shape_bag_index = 0;
+        } else {
+            // set next shape
+            self.next_shape_index = self.shape_bag[self.shape_bag_index as usize + 1];
+        }
         self.next_shape = SHAPES[self.next_shape_index as usize];
         self.shape = SHAPES[self.shape_index as usize];
         let result: bool = self.valid_location(self.shape, self.col, self.row, true);
@@ -390,6 +428,8 @@ impl Tetris {
             let use_row = self.row;
             self.move_shape(use_col, use_row, false); // no need to clear because this is first time on the grid
         }
+        // print statement to debug Random Generator
+        // println!("{:?} current: {} next: {}", self.shape_bag, self.shape_index, self.next_shape_index);
         result
     }
 
