@@ -1,28 +1,19 @@
-extern crate piston;
+extern crate piston_window;
 extern crate graphics;
-extern crate glutin_window;
-extern crate opengl_graphics;
 extern crate rand;
 
 pub mod tetris;
 
-use piston::window::{ AdvancedWindow, WindowSettings };
-use glutin_window::GlutinWindow as Window;
-use piston::event_loop::*;
-use opengl_graphics::{ GlGraphics, OpenGL };
-use opengl_graphics::glyph_cache::GlyphCache;
-use graphics::{ Transformed };
-use piston::input::*;
+use piston_window::*;
 
 use std::path::Path;
 use std::fs::OpenOptions;
 use tetris::*;
 
 struct App {
-    gl: GlGraphics,
     tetris: Tetris,
     elapsed_time: f64,
-    cache: GlyphCache<'static>,
+    glyphs: piston_window::Glyphs
 }
 
 //const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
@@ -65,14 +56,18 @@ const STATUS_PREVIEW_GRID_HEIGHT: f64 = CELL_SIZE * 6f64;
 struct Render;
 
 impl Render {
-    pub fn render_cell(c: &graphics::Context, gl: &mut GlGraphics, transform: [[f64; 3]; 2], color: [f32; 4]) {
+    pub fn render_cell(c: &graphics::Context,
+        gl: &mut piston_window::G2d, 
+        transform: [[f64; 3]; 2], color: [f32; 4]) {
         let square = graphics::rectangle::square(0f64, 0f64, CELL_SIZE - 1f64);
         let mut rectangle = graphics::Rectangle::new(color);
         rectangle.shape = graphics::rectangle::Shape::Round(4.0, 16);
         rectangle.draw(square, &c.draw_state, transform, gl);
     }
 
-    pub fn render_next_shape(c: &graphics::Context, gl: &mut GlGraphics, tetris: &Tetris,
+    pub fn render_next_shape(c: &graphics::Context, 
+        gl: &mut piston_window::G2d, 
+        tetris: &Tetris,
         transform: graphics::context::Context) -> graphics::context::Context {
         // render the next shape as a preview of what's coming next
         for point in tetris.get_next_shape().iter() {
@@ -85,38 +80,44 @@ impl Render {
         transform.trans(0f64, STATUS_PREVIEW_GRID_HEIGHT)
     }
 
-    pub fn render_game_over_section(c: &graphics::Context, gl: &mut GlGraphics, cache: &mut GlyphCache<'static>, 
-        tetris: &Tetris, transform: graphics::context::Context) -> graphics::context::Context {
+    pub fn writeln_text<G: Graphics<Texture=gfx_texture::Texture<gfx_device_gl::Resources>>>(text: &str,
+        color: piston_window::types::Color, 
+        transform: graphics::context::Context, 
+        context: &piston_window::Context,
+        cache: &mut piston_window::Glyphs, 
+        graphics: &mut G) -> graphics::context::Context {
         let mut result: graphics::context::Context = transform;
-        let mut text = graphics::Text::new(TEXT_FONT_SIZE);
-        text.color = ORANGE;
-        text.draw(&"GAME OVER", cache, &c.draw_state, result.transform, gl);
+        Text::new_color(color, TEXT_FONT_SIZE).
+            draw(text, cache, &context.draw_state, result.transform, graphics).unwrap();
         result = result.trans(0f64, LINE_HEIGHT);
+        result
+    } 
+    
+    pub fn render_game_over_section(c: &graphics::Context, tetris: &Tetris, 
+        cache: &mut piston_window::Glyphs, 
+        gl: &mut piston_window::G2d, 
+        transform: graphics::context::Context) -> graphics::context::Context {
+        let mut result: graphics::context::Context = transform;
+        result = Render::writeln_text(&"GAME OVER", ORANGE, result, c, cache, gl);
 
-        text.draw(&"Press 'N' for a new game", cache, &c.draw_state, result.transform, gl);
-        result = result.trans(0f64, LINE_HEIGHT);
+        result = Render::writeln_text(&"Press 'N' for a new game", ORANGE, result, c, cache, gl);
 
-        text.draw(&"Use arrow keys to move and rotate", cache, &c.draw_state, 
-            result.transform, gl);
-        result = result.trans(0f64, LINE_HEIGHT);
+        result = Render::writeln_text(&"Use arrow keys to move and rotate", ORANGE, result, c, cache, gl);
         
-        text.draw(&"Press spacebar to drop", cache, &c.draw_state, 
-            result.transform, gl);
-        result = result.trans(0f64, LINE_HEIGHT);
+        result = Render::writeln_text(&"Press spacebar to drop", ORANGE, result, c, cache, gl);
 
-        text.draw(&format!("Press 'K' to decrease starting level ({})", tetris.get_starting_level()), 
-            cache, &c.draw_state, result.transform, gl);
-        result = result.trans(0f64, LINE_HEIGHT);
+        result = Render::writeln_text(&format!("Press 'K' to decrease starting level ({})", tetris.get_starting_level()), 
+            ORANGE, result, c, cache, gl);
 
-        text.draw(&"Press 'L' to increase starting level", 
-            cache, &c.draw_state, result.transform, gl);
-        result = result.trans(0f64, LINE_HEIGHT);
+        result = Render::writeln_text(&"Press 'L' to increase starting level", 
+            ORANGE, result, c, cache, gl);
         result
     }
 
     // renders the game board cells e.g. the current shape, ghost shape, and all prior shapes that are
     // fixed in place
-    pub fn render_game_board(c: &graphics::Context, gl: &mut GlGraphics, tetris: &Tetris) {
+    pub fn render_game_board(c: &graphics::Context, 
+        gl: &mut piston_window::G2d, tetris: &Tetris) {
         for col in 0..COL_COUNT as i32 {
             for row in 0..ROW_COUNT as i32 {
                 let cell = tetris.get_grid_cell(col, row);
@@ -140,32 +141,27 @@ impl Render {
 }
 
 impl App {
-    fn render(&mut self, args: &RenderArgs) {
+    fn render(&mut self, window: &mut PistonWindow, event: &impl piston_window::GenericEvent) {
         // so that we can access inside closure
-        let use_cache = &mut self.cache;
+        let use_cache = &mut self.glyphs;
         let use_tetris = &self.tetris;
 
-        self.gl.draw(args.viewport(), |c, gl| {
+        window.draw_2d(event, |c, g, device| {
             // clear the viewport
-            graphics::clear(BLACK, gl);
+            clear(BLACK, g);
 
             // render the current score and level
-            let mut text = graphics::Text::new(TEXT_FONT_SIZE);
-            text.color = ORANGE;
             let mut transform: graphics::context::Context = c.trans(STATUS_LEFT_MARGIN, STATUS_TOP_MARGIN);
-            text.draw(&format!("Level: {}", use_tetris.get_level()), use_cache, &c.draw_state, 
-                transform.transform, gl);
-            transform = transform.trans(0f64, LINE_HEIGHT);
+            transform = Render::writeln_text(&format!("Level: {}", use_tetris.get_level()), 
+                ORANGE, transform, &c, use_cache, g);
 
-            text.draw(&format!("Score: {}", use_tetris.get_score()), use_cache, &c.draw_state, 
-                transform.transform, gl);
-            transform = transform.trans(0f64, LINE_HEIGHT);
+            transform = Render::writeln_text(&format!("Score: {}", use_tetris.get_score()), ORANGE, transform, &c, use_cache, g);
 
-            transform = Render::render_next_shape(&c, gl, use_tetris, transform);
+            transform = Render::render_next_shape(&c, g, use_tetris, transform);
 
             // render GAME OVER text if necessary
             if use_tetris.get_game_over() {
-                /*transform =*/ Render::render_game_over_section(&c, gl, use_cache, use_tetris, transform);
+                /*transform =*/ Render::render_game_over_section(&c, use_tetris, use_cache, g, transform);
             }
 
             // draw a white border around the game board
@@ -175,9 +171,11 @@ impl App {
                 TOP_MARGIN - 2f64,
                 (CELL_SIZE * COL_COUNT as f64) + 3f64,
                 (CELL_SIZE * ROW_COUNT as f64) + 3f64,
-            ], &c.draw_state, c.transform, gl);
+            ], &c.draw_state, c.transform, g);
 
-            Render::render_game_board(&c, gl, use_tetris);
+            Render::render_game_board(&c, g, use_tetris);
+
+            use_cache.factory.encoder.flush(device);
         });
     }
     
@@ -254,11 +252,8 @@ fn main() {
 }
 
 fn start_app() {
-    let opengl = OpenGL::V2_1;
-
-    let mut window: Window = WindowSettings::new("Piston Tetris", [1024, 768]).
+    let mut window: PistonWindow = WindowSettings::new("Piston Tetris", [1024, 768]).
         exit_on_esc(true).
-        opengl(opengl).
         build().
         unwrap();
     
@@ -273,20 +268,19 @@ fn start_app() {
     };
 
     let mut app = App {
-        gl: GlGraphics::new(opengl),
         tetris: Tetris::new(),
         elapsed_time: 0.0,
-        cache: GlyphCache::new(font_path).unwrap(),
+        glyphs: window.load_font(font_path).unwrap(),
     };  
 
-    let mut events = window.events();
-    while let Some(e) = events.next(&mut window) {
+    window.set_lazy(false);
+    while let Some(e) = window.next() {
         if let Some(Button::Keyboard(key)) = e.press_args() {
             app.handle_key_input(key);
         };
 
         if let Some(args) = e.render_args() {
-            app.render(&args);
+            app.render(&mut window, &e);
         };
 
         e.update(|args| { app.update(&args); });

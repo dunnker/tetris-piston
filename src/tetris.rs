@@ -148,7 +148,7 @@ pub struct Tetris {
     /// The total number of rows completed
     rows_completed: u32,
     /// Random number generator
-    rng: rand::ThreadRng,
+    rng: rand::rngs::ThreadRng,
 }
 
 impl Tetris {
